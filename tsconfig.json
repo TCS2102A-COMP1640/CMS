@@ -1,16 +1,14 @@
 {
 	"compilerOptions": {
-		"module": "commonjs",
 		"esModuleInterop": true,
-		"target": "es2020",
-		"noImplicitAny": true,
+		"target": "es6",
+		"module": "es6",
 		"moduleResolution": "node",
-		"sourceMap": false,
+		"sourceMap": true,
 		"outDir": "dist",
-		"baseUrl": ".",
-		"paths": {
-			"*": ["node_modules/*"]
-		}
+		"noImplicitAny": true,
+		"noUnusedLocals": true,
+		"noImplicitReturns": true,
 	},
 	"include": ["src/**/*"]
 }
