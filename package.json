@@ -3,6 +3,7 @@
 	"version": "1.0.0",
 	"author": "Group9",
 	"license": "MIT",
+	"type": "module",
 	"scripts": {
 		"start-dev": "concurrently \"tsc -w\" \"nodemon -r dotenv/config --experimental-specifier-resolution=node ./dist/app.js\"",
 		"format": "yarn prettier --write .",
