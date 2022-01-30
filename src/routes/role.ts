@@ -1,97 +1,85 @@
 import { Router, Request, Response } from "express";
 import { getRepository, Repository } from "typeorm";
-import { body, param, validationResult } from "express-validator";
+import { body, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
-import { Role } from "../database";
-import { AppConfig } from "../types";
+import { Role } from "@app/database";
+import { asyncRoute } from "@app/utils";
 import _ from "lodash";
 
-export function roleRoute(config: AppConfig): Router {
+export default function (): Router {
 	const router = Router();
 	const repository: Repository<Role> = getRepository(Role);
 
 	//Get all
-	router.get("/", async (req: Request, res: Response) => {
-		try {
-			return res.json(await repository.find());
-		} catch (err) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
-		}
-	});
+	router.get(
+		"/",
+		asyncRoute(async (req: Request, res: Response) => {
+			res.json(await repository.find());
+		})
+	);
 
 	//Get by id
-	router.get("/:id", param("id").isInt(), async (req: Request, res: Response) => {
-		try {
-			const errors = validationResult(req);
-			if (!errors.isEmpty()) {
-				return res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
-			}
+	router.get(
+		"/:id",
+		param("id").isInt(),
+		asyncRoute(async (req: Request, res: Response) => {
+			if (req.validate()) {
+				const role = await repository.findOne(req.params.id);
+				if (_.isNil(role)) {
+					res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
+					return;
+				}
 
-			const role = await repository.findOne(req.params.id);
-			if (_.isNil(role)) {
-				return res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
+				res.json(role);
 			}
-
-			return res.json(role);
-		} catch (err) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
-		}
-	});
+		})
+	);
 
 	//Create
-	router.post("/", body("name").exists().isString(), async (req: Request, res: Response) => {
-		try {
-			const errors = validationResult(req);
-			if (!errors.isEmpty()) {
-				return res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+	router.post(
+		"/",
+		body("name").exists().isString(),
+		asyncRoute(async (req: Request, res: Response) => {
+			if (req.validate()) {
+				const role = repository.create({
+					name: req.body.name
+				});
+
+				res.json(await repository.save(role));
 			}
-
-			const role = repository.create({
-				name: req.body.name
-			});
-
-			return res.json(await repository.save(role));
-		} catch (err) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
-		}
-	});
+		})
+	);
 
 	//Update
-	router.put("/:id", param("id").isInt(), async (req: Request, res: Response) => {
-		try {
-			const errors = validationResult(req);
-			if (!errors.isEmpty()) {
-				return res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+	router.put(
+		"/:id",
+		param("id").isInt(),
+		asyncRoute(async (req: Request, res: Response) => {
+			if (req.validate()) {
+				const role = await repository.findOne(req.params.id);
+				if (_.isNil(role)) {
+					res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
+					return;
+				}
+
+				role.name = _.get(req.body, "name", role.name);
+
+				res.json(await repository.save(role));
 			}
-
-			const role = await repository.findOne(req.params.id);
-			if (_.isNil(role)) {
-				return res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
-			}
-
-			role.name = _.get(req.body, "name", role.name);
-
-			return res.json(await repository.save(role));
-		} catch (err) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
-		}
-	});
+		})
+	);
 
 	//Delete
-	router.delete("/:id", param("id").isInt(), async (req: Request, res: Response) => {
-		try {
-			const errors = validationResult(req);
-			if (!errors.isEmpty()) {
-				return res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+	router.delete(
+		"/:id",
+		param("id").isInt(),
+		asyncRoute(async (req: Request, res: Response) => {
+			if (req.validate()) {
+				await repository.delete(req.params.id);
+				res.status(StatusCodes.OK).send(ReasonPhrases.OK);
 			}
-
-			await repository.delete(req.params.id);
-
-			return res.status(StatusCodes.OK).send(ReasonPhrases.OK);
-		} catch (err) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
-		}
-	});
+		})
+	);
 
 	return router;
 }

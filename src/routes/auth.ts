@@ -1,15 +1,32 @@
 import { Router, Request, Response } from "express";
-import { AppConfig } from "../types";
+import { checkSchema } from "express-validator";
+import { StatusCodes, ReasonPhrases } from "http-status-codes";
+import { asyncRoute } from "@app/utils";
 
-export function authRoute(config: AppConfig): Router {
+export default function (): Router {
 	const router = Router();
 
-	router.get("/", async (req: Request, res: Response) => {
-		try {
-			return res.status(200).send("Hello World!");
-		} catch (err) {
-			return res.status(404);
-		}
-	});
+	router.post(
+		"/",
+		checkSchema({
+			email: {
+				in: "body",
+				exists: true,
+				isEmail: true,
+				normalizeEmail: true
+			},
+			password: {
+				in: "body",
+				exists: true,
+				isString: true,
+			}
+		}),
+		asyncRoute(async (req: Request, res: Response) => {
+			if (req.validate()) {
+				res.status(StatusCodes.OK).send(ReasonPhrases.OK);
+			}
+		})
+	);
+
 	return router;
 }
