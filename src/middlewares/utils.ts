@@ -3,7 +3,7 @@ import { validationResult } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import _ from "lodash";
 
-export default function (req: Request, res: Response, next: NextFunction) {
+export function utilsMiddleware(req: Request, res: Response, next: NextFunction) {
 	req.validate = function () {
 		const result = validationResult(this);
 		if (!result.isEmpty()) {

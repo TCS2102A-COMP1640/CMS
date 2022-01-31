@@ -1,4 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, ManyToMany, CreateDateColumn, OneToMany, JoinTable } from "typeorm";
+import {
+	Entity,
+	PrimaryGeneratedColumn,
+	Column,
+	ManyToOne,
+	ManyToMany,
+	CreateDateColumn,
+	OneToMany,
+	JoinTable,
+	Connection
+} from "typeorm";
 import { User } from "./user";
 import { AcademicYear } from "./year";
 import { Category } from "./category";
@@ -16,7 +26,9 @@ export class Idea {
 	academicYear: AcademicYear;
 
 	@ManyToMany(() => Category, (category) => category.ideas)
-    @JoinTable()
+	@JoinTable({
+		name: "idea_categories"
+	})
 	categories: Promise<Category[]>;
 
 	@OneToMany(() => Comment, (comment) => comment.idea)
@@ -31,3 +43,5 @@ export class Idea {
 	@CreateDateColumn({ type: "timestamp" })
 	createTimestamp: Date;
 }
+
+export async function setupIdea(connection: Connection) {}

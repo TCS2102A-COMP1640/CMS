@@ -1,3 +1,5 @@
+import { Algorithm } from "jsonwebtoken";
+
 export interface ApplicationConfig {
 	serverHost: string;
 	serverPort: number;
@@ -8,7 +10,8 @@ export interface ApplicationConfig {
 	databaseUsername: string;
 	databasePassword: string;
 	jwtSecret: string;
-	jwtAlgorithm: string;
+	jwtAlgorithm: Algorithm;
+	jwtExpiresIn: string | number;
 }
 
 declare module "express-serve-static-core" {
@@ -16,12 +19,16 @@ declare module "express-serve-static-core" {
 		validate(): boolean;
 	}
 
-	interface User extends Express.User {
-		id?: string;
-		role: string;
-	}
-
 	interface Application extends Express.Application {
 		config: ApplicationConfig;
+	}
+}
+
+declare global {
+	namespace Express {
+		interface User {
+			id?: string;
+			role: string;
+		}
 	}
 }

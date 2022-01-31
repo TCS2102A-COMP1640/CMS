@@ -1,33 +1,34 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
 import { body, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
-import { Permission } from "@app/database";
-import { asyncRoute } from "@app/utils";
+import { Permission, Permissions } from "@app/database";
+import { asyncRoute, permission } from "@app/utils";
 import _ from "lodash";
 
-export default function (): Router {
+function validateNotAllPermission(permission: Permission): boolean {
+	return !(permission.name === Permissions.ALL);
+}
+
+export function permissionRouter(): Router {
 	const router = Router();
 	const repository: Repository<Permission> = getRepository(Permission);
 
 	router.get(
 		"/",
-		asyncRoute(async (req: Request, res: Response) => {
+		permission(Permissions.PERMISSION_GET_ALL),
+		asyncRoute(async (req, res) => {
 			res.json(await repository.find());
 		})
 	);
 
 	router.get(
 		"/:id",
+		permission(Permissions.PERMISSION_GET_BY_ID),
 		param("id").isInt(),
-		asyncRoute(async (req: Request, res: Response) => {
+		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				const permission = await repository.findOne(req.params.id);
-				if (_.isNil(permission)) {
-					res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
-					return;
-				}
-
+				const permission = await repository.findOneOrFail(req.params.id);
 				res.json(permission);
 			}
 		})
@@ -35,8 +36,9 @@ export default function (): Router {
 
 	router.post(
 		"/",
+		permission(Permissions.PERMISSION_CREATE),
 		body("name").exists().isString().trim(),
-		asyncRoute(async (req: Request, res: Response) => {
+		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				const permission = repository.create({
 					name: req.body.name
@@ -46,11 +48,11 @@ export default function (): Router {
 		})
 	);
 
-	router.put("/:id", param("id").isInt(), async (req: Request, res: Response) => {
+	router.put("/:id", permission(Permissions.PERMISSION_UPDATE), param("id").isInt(), async (req, res) => {
 		if (req.validate()) {
-			const permission = await repository.findOne(req.params.id);
-			if (_.isNil(permission)) {
-				res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
+			const permission = await repository.findOneOrFail(req.params.id);
+			if (!validateNotAllPermission(permission)) {
+				res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
 				return;
 			}
 
@@ -62,8 +64,13 @@ export default function (): Router {
 
 	router.delete(
 		"/:id",
+		permission(Permissions.PERMISSION_DELETE),
 		param("id").isInt(),
-		asyncRoute(async (req: Request, res: Response) => {
+		asyncRoute(async (req, res) => {
+			if (!validateNotAllPermission(await repository.findOneOrFail(req.params.id))) {
+				res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+				return;
+			}
 			await repository.delete(req.params.id);
 			res.status(StatusCodes.OK).send(ReasonPhrases.OK);
 		})

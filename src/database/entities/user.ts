@@ -1,5 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from "typeorm";
-import { Role } from "./role";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Connection, Repository } from "typeorm";
+import { Role, Roles } from "./role";
 import { Department } from "./department";
 import { Idea } from "./idea";
 import { Comment } from "./comment";
@@ -32,4 +32,23 @@ export class User {
 
 	@Column()
 	password: string;
+}
+
+export async function setupUser(connection: Connection) {
+	const userRepository: Repository<User> = connection.getRepository(User);
+	const roleRepository: Repository<Role> = connection.getRepository(Role);
+
+	const adminRole = await roleRepository.findOne({ name: Roles.ADMIN });
+	await userRepository
+		.createQueryBuilder()
+		.insert()
+		.values({
+			email: "admin@university.com",
+			firstName: "Admin",
+			lastName: "University",
+			password: "adminpassword123",
+			role: adminRole
+		})
+		.onConflict("(email) DO NOTHING")
+		.execute();
 }

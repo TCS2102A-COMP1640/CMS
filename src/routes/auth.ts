@@ -1,11 +1,10 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import { checkSchema } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { asyncRoute } from "@app/utils";
 
-export default function (): Router {
+export function authRouter(): Router {
 	const router = Router();
-
 	router.post(
 		"/",
 		checkSchema({
@@ -18,10 +17,10 @@ export default function (): Router {
 			password: {
 				in: "body",
 				exists: true,
-				isString: true,
+				isString: true
 			}
 		}),
-		asyncRoute(async (req: Request, res: Response) => {
+		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				res.status(StatusCodes.OK).send(ReasonPhrases.OK);
 			}

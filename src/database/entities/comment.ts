@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Connection } from "typeorm";
 import { Idea } from "./idea";
 import { User } from "./user";
 
@@ -18,4 +18,9 @@ export class Comment {
 
 	@Column()
 	isAnonymous: boolean;
+}
+
+
+export async function setupComment(connection: Connection) {
+
 }
