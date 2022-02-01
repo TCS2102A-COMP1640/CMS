@@ -46,7 +46,7 @@ export async function setupRole(connection: Connection) {
 		};
 	});
 
-	await roleRepository.createQueryBuilder().insert().values(roles).onConflict("(name) DO NOTHING").execute();
+	await roleRepository.createQueryBuilder().insert().values(roles).orIgnore().execute();
 
 	const allPermission = await permissionRepository.findOne({ name: Permissions.ALL });
 	const adminRole = await roleRepository.findOne({ name: Roles.ADMIN });

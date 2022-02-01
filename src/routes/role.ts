@@ -14,7 +14,6 @@ export function roleRouter(): Router {
 	const router = Router();
 	const repository: Repository<Role> = getRepository(Role);
 
-	//Get all
 	router.get(
 		"/",
 		permission(Permissions.ROLE_GET_ALL),
@@ -23,41 +22,28 @@ export function roleRouter(): Router {
 		})
 	);
 
-	//Get by id
 	router.get(
 		"/:id",
 		permission(Permissions.ROLE_GET_BY_ID),
 		param("id").isInt(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				const role = await repository.findOne(req.params.id);
-				if (_.isNil(role)) {
-					res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
-					return;
-				}
-
-				res.json(role);
+				res.json(await repository.findOneOrFail(req.params.id));
 			}
 		})
 	);
 
-	//Create
 	router.post(
 		"/",
 		permission(Permissions.ROLE_CREATE),
 		body("name").exists().isString(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				const role = repository.create({
-					name: req.body.name
-				});
-
-				res.json(await repository.save(role));
+				res.json(await repository.save(repository.create({ name: req.body.name })));
 			}
 		})
 	);
 
-	//Update
 	router.put(
 		"/:id",
 		permission(Permissions.ROLE_UPDATE),
@@ -77,7 +63,6 @@ export function roleRouter(): Router {
 		})
 	);
 
-	//Delete
 	router.delete(
 		"/:id",
 		permission(Permissions.ROLE_DELETE),

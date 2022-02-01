@@ -35,5 +35,5 @@ export async function setupPermission(connection: Connection) {
 			name: permission
 		};
 	});
-	await repository.createQueryBuilder().insert().values(permissions).onConflict("(name) DO NOTHING").execute();
+	await repository.createQueryBuilder().insert().values(permissions).orIgnore().execute();
 }

@@ -38,6 +38,9 @@ export async function setupUser(connection: Connection) {
 	const userRepository: Repository<User> = connection.getRepository(User);
 	const roleRepository: Repository<Role> = connection.getRepository(Role);
 
+	const adminSalt = "c542835b52509cbce6f32a3f2e44f52cf4caebbddc2fcc8ebcbb6ca105ec2bd1";
+	const adminHash =
+		"6fb4ec0fed90c8812c222ecbefcb2c47462b9d9cd24491447019dd4620a7c5f1c97d5285256bddf61df36e1fd5540de2a9be9f6ccfe3977db3bd7dab2c3b6cb1";
 	const adminRole = await roleRepository.findOne({ name: Roles.ADMIN });
 	await userRepository
 		.createQueryBuilder()
@@ -46,9 +49,9 @@ export async function setupUser(connection: Connection) {
 			email: "admin@university.com",
 			firstName: "Admin",
 			lastName: "University",
-			password: "adminpassword123",
+			password: `${adminHash}$${adminSalt}`,
 			role: adminRole
 		})
-		.onConflict("(email) DO NOTHING")
+		.orIgnore()
 		.execute();
 }

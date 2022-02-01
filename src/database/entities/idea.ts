@@ -19,10 +19,10 @@ export class Idea {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@ManyToOne(() => User, (user) => user.ideas)
+	@ManyToOne(() => User, (user) => user.ideas, { nullable: false })
 	user: User;
 
-	@ManyToOne(() => AcademicYear, (academicYear) => academicYear.ideas)
+	@ManyToOne(() => AcademicYear, (academicYear) => academicYear.ideas, { nullable: false })
 	academicYear: AcademicYear;
 
 	@ManyToMany(() => Category, (category) => category.ideas)

@@ -1,4 +1,4 @@
-import express, { Request } from "express";
+import express from "express";
 import jwt, { Algorithm } from "jsonwebtoken";
 import expressJwt from "express-jwt";
 import morgan from "morgan";
@@ -22,7 +22,7 @@ const config: ApplicationConfig = {
 	databasePassword: process.env.DATABASE_PASSWORD || "postgres",
 	jwtSecret: process.env.JWT_SECRET || "4DFFBC3C4864E2F9A8647E79446FA",
 	jwtAlgorithm: (process.env.JWT_ALGORITHM as Algorithm) || "HS256",
-	jwtExpiresIn: process.env.JWT_EXPIRES_IN || 60
+	jwtExpiresIn: process.env.JWT_EXPIRES_IN || 86400
 };
 const guestToken = jwt.sign(
 	{
@@ -31,17 +31,8 @@ const guestToken = jwt.sign(
 	config.jwtSecret,
 	{ algorithm: config.jwtAlgorithm }
 );
-const adminToken = jwt.sign(
-	{
-		id: 1,
-		role: Roles.ADMIN
-	},
-	config.jwtSecret,
-	{ algorithm: config.jwtAlgorithm }
-);
 
 console.log("Guest token: ", guestToken);
-console.log("Admin token: ", adminToken);
 
 createConnection({
 	type: "postgres",

@@ -7,10 +7,10 @@ export class Comment {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@ManyToOne(() => Idea, (idea) => idea.comments)
+	@ManyToOne(() => Idea, (idea) => idea.comments, { nullable: false })
 	idea: Idea;
 
-	@ManyToOne(() => User, (user) => user.comments)
+	@ManyToOne(() => User, (user) => user.comments, { nullable: false })
 	user: User;
 
 	@Column()
@@ -20,7 +20,4 @@ export class Comment {
 	isAnonymous: boolean;
 }
 
-
-export async function setupComment(connection: Connection) {
-
-}
+export async function setupComment(connection: Connection) {}

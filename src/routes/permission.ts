@@ -28,8 +28,7 @@ export function permissionRouter(): Router {
 		param("id").isInt(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				const permission = await repository.findOneOrFail(req.params.id);
-				res.json(permission);
+				res.json(await repository.findOneOrFail(req.params.id));
 			}
 		})
 	);
@@ -40,10 +39,7 @@ export function permissionRouter(): Router {
 		body("name").exists().isString().trim(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				const permission = repository.create({
-					name: req.body.name
-				});
-				res.json(await repository.save(permission));
+				res.json(await repository.save(repository.create({ name: req.body.name })));
 			}
 		})
 	);
