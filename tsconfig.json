@@ -2,11 +2,10 @@
 	"compilerOptions": {
 		"module": "commonjs",
 		"moduleResolution": "node",
-		"target": "es5",
-		"esModuleInterop": true,
+		"target": "es2021",
+        "esModuleInterop": true,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
-		"sourceMap": false,
 		"outDir": "dist",
 		"baseUrl": ".",
 		"paths": {
@@ -14,9 +13,8 @@
 			"*": ["node_modules/*"]
 		},
 		"noImplicitAny": true,
-		"noUnusedLocals": true,
+		// "noUnusedLocals": true,
 		"plugins": [{ "transform": "typescript-transform-paths", "exclude": ["**/node_modules/**"] }]
 	},
-	"include": ["src/**/*"],
-	"exclude": ["src/interfaces"]
+	"include": ["src/*"]
 }
