@@ -1,14 +1,15 @@
 import { Connection } from "typeorm";
 import { Category, setupCategory } from "./entities/category";
-import { Comment, setupComment } from "./entities/comment";
+import { Comment } from "./entities/comment";
 import { Department, setupDepartment } from "./entities/department";
-import { Idea, setupIdea } from "./entities/idea";
+import { Idea } from "./entities/idea";
 import { Permission, Permissions, setupPermission } from "./entities/permission";
 import { Role, Roles, setupRole } from "./entities/role";
 import { User, setupUser } from "./entities/user";
 import { AcademicYear, setupAcademicYear } from "./entities/year";
 
 export async function setupDatabase(connection: Connection) {
+	await setupAcademicYear(connection);
 	await setupDepartment(connection);
 	await setupCategory(connection);
 

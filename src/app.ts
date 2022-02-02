@@ -1,11 +1,12 @@
 import express from "express";
+import cors from "cors";
 import jwt, { Algorithm } from "jsonwebtoken";
 import expressJwt from "express-jwt";
 import morgan from "morgan";
 import bodyParser from "body-parser";
-import { createConnection } from "typeorm";
 import path from "path";
 import _ from "lodash";
+import { createConnection } from "typeorm";
 import { authRouter, roleRouter, permissionRouter } from "@app/routes";
 import { errorsMiddleware, utilsMiddleware } from "@app/middlewares";
 import { Roles, setupDatabase } from "./database";
@@ -14,7 +15,7 @@ import { ApplicationConfig } from "@app/interfaces";
 const config: ApplicationConfig = {
 	serverHost: process.env.SERVER_HOST || "localhost",
 	serverPort: _.toNumber(process.env.SERVER_PORT) || 5000,
-	serverEnvironment: process.env.SERVER_ENVIRONMENT || "development",
+	serverEnvironment: process.env.NODE_ENV || "development",
 	databaseHost: process.env.DATABASE_HOST || "localhost",
 	databasePort: _.toNumber(process.env.DATABASE_PORT) || 5432,
 	databaseName: process.env.DATABASE_NAME || "cmsdb",
@@ -51,6 +52,11 @@ createConnection({
 
 		app.config = config;
 
+		app.use(
+			cors({
+				origin: config.serverEnvironment === "development" ? "http://localhost:3000" : "*" //for now
+			})
+		);
 		app.use(morgan("combined"));
 		app.use(bodyParser.json());
 		app.use(bodyParser.urlencoded({ extended: false }));

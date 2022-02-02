@@ -43,5 +43,3 @@ export class Idea {
 	@CreateDateColumn({ type: "timestamp" })
 	createTimestamp: Date;
 }
-
-export async function setupIdea(connection: Connection) {}

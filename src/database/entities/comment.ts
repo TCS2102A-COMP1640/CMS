@@ -19,5 +19,3 @@ export class Comment {
 	@Column()
 	isAnonymous: boolean;
 }
-
-export async function setupComment(connection: Connection) {}

@@ -9,6 +9,7 @@
 		"build": "ttsc"
 	},
 	"dependencies": {
+		"cors": "^2.8.5",
 		"dotenv": "^14.2.0",
 		"express": "^4.16.4",
 		"express-jwt": "^6.1.0",
@@ -20,6 +21,7 @@
 		"typeorm": "0.2.41"
 	},
 	"devDependencies": {
+		"@types/cors": "^2.8.12",
 		"@types/express": "^4.16.1",
 		"@types/express-jwt": "^6.0.4",
 		"@types/express-validator": "^3.0.0",
