@@ -13,7 +13,7 @@
 			"*": ["node_modules/*"]
 		},
 		"noImplicitAny": true,
-		// "noUnusedLocals": true,
+		"noUnusedLocals": true,
 		"plugins": [{ "transform": "typescript-transform-paths", "exclude": ["**/node_modules/**"] }]
 	},
 	"include": ["src/*"]

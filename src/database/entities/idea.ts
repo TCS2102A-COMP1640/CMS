@@ -6,8 +6,7 @@ import {
 	ManyToMany,
 	CreateDateColumn,
 	OneToMany,
-	JoinTable,
-	Connection
+	JoinTable
 } from "typeorm";
 import { User } from "./user";
 import { AcademicYear } from "./year";
