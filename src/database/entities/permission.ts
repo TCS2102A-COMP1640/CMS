@@ -25,7 +25,12 @@ export enum Permissions {
 	PERMISSION_GET_BY_ID = "permission.get.id",
 	PERMISSION_CREATE = "permission.create",
 	PERMISSION_UPDATE = "permission.update",
-	PERMISSION_DELETE = "permission.delete"
+	PERMISSION_DELETE = "permission.delete", 
+	YEAR_GET_ALL = "year.get.all",
+	YEAR_GET_BY_ID = "year.get.id",
+	YEAR_CREATE = "year.create",
+	YEAR_UPDATE = "year.update",
+	YEAR_DELETE = "year.delete"
 }
 
 export async function setupPermission(connection: Connection) {

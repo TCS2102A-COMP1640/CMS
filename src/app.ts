@@ -7,7 +7,7 @@ import bodyParser from "body-parser";
 import path from "path";
 import _ from "lodash";
 import { createConnection } from "typeorm";
-import { authRouter, roleRouter, permissionRouter } from "@app/routes";
+import { authRouter, roleRouter, permissionRouter, yearRouter} from "@app/routes";
 import { errorsMiddleware, utilsMiddleware } from "@app/middlewares";
 import { Roles, setupDatabase } from "./database";
 import { ApplicationConfig } from "@app/interfaces";
@@ -86,6 +86,7 @@ createConnection({
 		app.use("/auth", authRouter());
 		app.use("/roles", roleRouter());
 		app.use("/permissions", permissionRouter());
+		app.use("/years", yearRouter());
 
 		app.use(errorsMiddleware);
 
