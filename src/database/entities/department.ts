@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, Connection } from "typeorm";
-import { User } from "./user";
+import { Entity, PrimaryGeneratedColumn, Column, Connection } from "typeorm";
 
 @Entity()
 export class Department {
@@ -8,9 +7,6 @@ export class Department {
 
 	@Column({ nullable: false, unique: true })
 	name: string;
-
-	@OneToMany(() => User, (user) => user.department)
-	users: Promise<User[]>;
 }
 
 export async function setupDepartment(connection: Connection) {}

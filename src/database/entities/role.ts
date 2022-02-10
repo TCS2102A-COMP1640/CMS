@@ -1,14 +1,4 @@
-import {
-	Entity,
-	PrimaryGeneratedColumn,
-	Column,
-	ManyToMany,
-	OneToMany,
-	JoinTable,
-	Connection,
-	Repository
-} from "typeorm";
-import { User } from "./user";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, Connection, Repository } from "typeorm";
 import { Permission, Permissions } from "./permission";
 
 @Entity()
@@ -24,9 +14,6 @@ export class Role {
 		name: "role_permissions"
 	})
 	permissions: Promise<Permission[]>;
-
-	@OneToMany(() => User, (user) => user.role)
-	users: Promise<User[]>;
 }
 
 export enum Roles {

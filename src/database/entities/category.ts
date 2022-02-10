@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, Connection } from "typeorm";
-import { Idea } from "./idea";
+import { Entity, PrimaryGeneratedColumn, Column, Connection } from "typeorm";
 
 @Entity()
 export class Category {
@@ -8,9 +7,6 @@ export class Category {
 
 	@Column({ nullable: false, unique: true })
 	name: string;
-
-	@ManyToMany(() => Idea, (idea) => idea.categories)
-	ideas: Promise<Idea[]>;
 }
 
 export async function setupCategory(connection: Connection) {}

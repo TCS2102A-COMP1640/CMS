@@ -7,15 +7,12 @@ export class Comment {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@ManyToOne(() => Idea, (idea) => idea.comments, { nullable: false })
+	@ManyToOne(() => Idea, (idea) => idea.comments, { nullable: false, onDelete: "CASCADE" })
 	idea: Idea;
 
-	@ManyToOne(() => User, (user) => user.comments, { nullable: false })
+	@ManyToOne(() => User, { nullable: false, onDelete: "CASCADE" })
 	user: User;
 
 	@Column()
 	content: string;
-
-	@Column()
-	isAnonymous: boolean;
 }

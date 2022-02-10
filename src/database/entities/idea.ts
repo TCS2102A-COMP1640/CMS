@@ -18,13 +18,13 @@ export class Idea {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@ManyToOne(() => User, (user) => user.ideas, { nullable: false })
+	@ManyToOne(() => User, { nullable: false, onDelete: "CASCADE" })
 	user: User;
 
-	@ManyToOne(() => AcademicYear, (academicYear) => academicYear.ideas, { nullable: false })
+	@ManyToOne(() => AcademicYear, { nullable: false, onDelete: "CASCADE" })
 	academicYear: AcademicYear;
 
-	@ManyToMany(() => Category, (category) => category.ideas)
+	@ManyToMany(() => Category, { cascade: true })
 	@JoinTable({
 		name: "idea_categories"
 	})
@@ -35,9 +35,6 @@ export class Idea {
 
 	@Column()
 	content: string;
-
-	@Column()
-	isAnonymous: boolean;
 
 	@CreateDateColumn({ type: "timestamp" })
 	createTimestamp: Date;

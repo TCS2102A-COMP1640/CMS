@@ -1,8 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Connection, Repository } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Connection, Repository } from "typeorm";
 import { Role, Roles } from "./role";
 import { Department } from "./department";
-import { Idea } from "./idea";
-import { Comment } from "./comment";
 
 @Entity()
 export class User {
@@ -12,17 +10,11 @@ export class User {
 	@Column({ unique: true, nullable: false })
 	email: string;
 
-	@ManyToOne(() => Role, (role) => role.users)
+	@ManyToOne(() => Role, { nullable: false, onDelete: "CASCADE" })
 	role: Role;
 
-	@ManyToOne(() => Department, (department) => department.users)
+	@ManyToOne(() => Department, { onDelete: "SET NULL" })
 	department: Department;
-
-	@OneToMany(() => Idea, (idea) => idea.user)
-	ideas: Promise<Idea[]>;
-
-	@OneToMany(() => Comment, (comment) => comment.user)
-	comments: Promise<Comment[]>;
 
 	@Column()
 	firstName: string;

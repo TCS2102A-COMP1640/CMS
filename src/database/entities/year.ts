@@ -1,10 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, Connection } from "typeorm";
-import { Idea } from "./idea";
+import { Entity, PrimaryGeneratedColumn, Column, Connection } from "typeorm";
 
 @Entity()
 export class AcademicYear {
 	@PrimaryGeneratedColumn()
 	id: number;
+
+	@Column({ nullable: false, unique: true })
+	name: string;
 
 	@Column({ type: "timestamp", nullable: false })
 	openingDate: Date;
@@ -14,9 +16,6 @@ export class AcademicYear {
 
 	@Column({ type: "timestamp", nullable: false })
 	finalClosureDate: Date;
-
-	@OneToMany(() => Idea, (idea) => idea.academicYear)
-	ideas: Promise<Idea[]>;
 }
 
 export async function setupAcademicYear(connection: Connection) {}
