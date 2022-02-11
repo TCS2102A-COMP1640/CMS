@@ -31,8 +31,13 @@ export function yearRouter(): Router {
 
 	router.post(
 		"/",
-		// TODO: Use checkSchema from express-validator here
+		permission(Permissions.YEAR_CREATE),
 		checkSchema({
+			name: {
+				in: "body",
+				exists: true,
+				isString: true
+			},
 			openingDate: {
 				in: "body",
 				exists: true,
@@ -49,11 +54,23 @@ export function yearRouter(): Router {
 				isDate: true
 			}
 		}),
-		permission(Permissions.YEAR_CREATE),
-		body("name").exists().isString(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				res.json(await repository.save(repository.create({ name: req.body.name })));
+				const academicYear = repository.create({
+					name: req.body.name,
+					openingDate: req.body.openingDate,
+					closureDate: req.body.closureDate,
+					finalClosureDate: req.body.finalClosureDate
+				});
+				if (
+					academicYear.openingDate < academicYear.closureDate &&
+					academicYear.openingDate < academicYear.finalClosureDate &&
+					academicYear.closureDate <= academicYear.finalClosureDate
+				) {
+					res.json(await repository.save(academicYear));
+				} else {
+					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+				}
 			}
 		})
 	);
@@ -65,7 +82,6 @@ export function yearRouter(): Router {
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				const academicYear = await repository.findOneOrFail(req.params.id);
-				//FIXME: check for whether openingDate is lesser than closureDate and finalClosureDate
 				academicYear.name = _.get(req.body, "name", academicYear.name);
 				academicYear.openingDate = _.get(req.body, "openingDate", academicYear.openingDate);
 				academicYear.closureDate = _.get(req.body, "closureDate", academicYear.closureDate);
@@ -73,9 +89,12 @@ export function yearRouter(): Router {
 
 				if (
 					academicYear.openingDate < academicYear.closureDate &&
-					academicYear.openingDate < academicYear.finalClosureDate
+					academicYear.openingDate < academicYear.finalClosureDate &&
+					academicYear.closureDate <= academicYear.finalClosureDate
 				) {
 					res.json(await repository.save(academicYear));
+				} else {
+					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
 				}
 			}
 		})
