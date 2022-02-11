@@ -7,7 +7,15 @@ import bodyParser from "body-parser";
 import path from "path";
 import _ from "lodash";
 import { createConnection } from "typeorm";
-import { authRouter, roleRouter, permissionRouter, yearRouter, ideaRouter, categoryRouter } from "@app/routes";
+import {
+	authRouter,
+	roleRouter,
+	permissionRouter,
+	yearRouter,
+	ideaRouter,
+	categoryRouter,
+	departmentRouter
+} from "@app/routes";
 import { errorsMiddleware, utilsMiddleware } from "@app/middlewares";
 import { Roles, setupDatabase } from "./database";
 import { ApplicationConfig } from "@app/interfaces";
@@ -89,6 +97,7 @@ createConnection({
 		app.use("/years", yearRouter());
 		app.use("/ideas", ideaRouter());
 		app.use("/categories", categoryRouter());
+		app.use("/departments", departmentRouter());
 
 		app.use(errorsMiddleware);
 

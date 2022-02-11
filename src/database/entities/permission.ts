@@ -40,7 +40,12 @@ export enum Permissions {
 	CATEGORY_GET_BY_ID = "category.get.id",
 	CATEGORY_CREATE = "category.create",
 	CATEGORY_UPDATE = "category.update",
-	CATEGORY_DELETE = "category.delete"
+	CATEGORY_DELETE = "category.delete",
+	DEPARTMENT_GET_ALL = "department.get.all",
+	DEPARTMENT_GET_BY_ID = "department.get.id",
+	DEPARTMENT_CREATE = "department.create",
+	DEPARTMENT_UPDATE = "department.update",
+	DEPARTMENT_DELETE = "department.delete"
 }
 
 export async function setupPermission(connection: Connection) {
