@@ -25,7 +25,7 @@ export enum Permissions {
 	PERMISSION_GET_BY_ID = "permission.get.id",
 	PERMISSION_CREATE = "permission.create",
 	PERMISSION_UPDATE = "permission.update",
-	PERMISSION_DELETE = "permission.delete", 
+	PERMISSION_DELETE = "permission.delete",
 	YEAR_GET_ALL = "year.get.all",
 	YEAR_GET_BY_ID = "year.get.id",
 	YEAR_CREATE = "year.create",
@@ -35,7 +35,12 @@ export enum Permissions {
 	IDEA_GET_BY_ID = "idea.get.id",
 	IDEA_CREATE = "idea.create",
 	IDEA_UPDATE = "idea.update",
-	IDEA_DELETE = "idea.delete"
+	IDEA_DELETE = "idea.delete",
+	CATEGORY_GET_ALL = "category.get.all",
+	CATEGORY_GET_BY_ID = "category.get.id",
+	CATEGORY_CREATE = "category.create",
+	CATEGORY_UPDATE = "category.update",
+	CATEGORY_DELETE = "category.delete"
 }
 
 export async function setupPermission(connection: Connection) {

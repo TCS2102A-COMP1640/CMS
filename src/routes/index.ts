@@ -4,3 +4,4 @@ export * from "./permission";
 export * from "./user";
 export * from "./year";
 export * from "./idea";
+export * from "./category";
