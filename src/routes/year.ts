@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
-import { param } from "express-validator";
+import { body, param, checkSchema } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { AcademicYear, Permissions } from "@app/database";
 import { asyncRoute, permission } from "@app/utils";
@@ -32,8 +32,30 @@ export function yearRouter(): Router {
 	router.post(
 		"/",
 		// TODO: Use checkSchema from express-validator here
+		checkSchema({
+			openingDate: {
+				in: "body",
+				exists: true,
+				isDate: true
+			},
+			closureDate: {
+				in: "body",
+				exists: true,
+				isDate: true
+			},
+			finalClosureDate: {
+				in: "body",
+				exists: true,
+				isDate: true
+			}
+		}),
 		permission(Permissions.YEAR_CREATE),
-		asyncRoute(async (req, res) => {})
+		body("name").exists().isString(),
+		asyncRoute(async (req, res) => {
+			if (req.validate()) {
+				res.json(await repository.save(repository.create({ name: req.body.name })));
+			}
+		})
 	);
 
 	router.put(
@@ -49,7 +71,12 @@ export function yearRouter(): Router {
 				academicYear.closureDate = _.get(req.body, "closureDate", academicYear.closureDate);
 				academicYear.finalClosureDate = _.get(req.body, "finalClosureDate", academicYear.finalClosureDate);
 
-				res.json(await repository.save(academicYear));
+				if (
+					academicYear.openingDate < academicYear.closureDate &&
+					academicYear.openingDate < academicYear.finalClosureDate
+				) {
+					res.json(await repository.save(academicYear));
+				}
 			}
 		})
 	);
