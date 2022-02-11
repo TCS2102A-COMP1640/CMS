@@ -30,7 +30,12 @@ export enum Permissions {
 	YEAR_GET_BY_ID = "year.get.id",
 	YEAR_CREATE = "year.create",
 	YEAR_UPDATE = "year.update",
-	YEAR_DELETE = "year.delete"
+	YEAR_DELETE = "year.delete",
+	IDEA_GET_ALL = "idea.get.all",
+	IDEA_GET_BY_ID = "idea.get.id",
+	IDEA_CREATE = "idea.create",
+	IDEA_UPDATE = "idea.update",
+	IDEA_DELETE = "idea.delete"
 }
 
 export async function setupPermission(connection: Connection) {
