@@ -14,7 +14,8 @@ import {
 	yearRouter,
 	ideaRouter,
 	categoryRouter,
-	departmentRouter
+	departmentRouter,
+	userRouter
 } from "@app/routes";
 import { errorsMiddleware, utilsMiddleware } from "@app/middlewares";
 import { Roles, setupDatabase } from "./database";
@@ -98,6 +99,7 @@ createConnection({
 		app.use("/ideas", ideaRouter());
 		app.use("/categories", categoryRouter());
 		app.use("/departments", departmentRouter());
+		app.use("/users", userRouter());
 
 		app.use(errorsMiddleware);
 
