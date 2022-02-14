@@ -4,8 +4,7 @@ import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { EntityNotFoundError } from "typeorm";
 
 export function errorsMiddleware(error: Error, req: Request, res: Response, next: NextFunction) {
-	console.error("----------ERROR CAUGHT---------- \n", error);
-	console.log("--------------------------------");
+    req.error = error;
 	if (error instanceof EntityNotFoundError) {
 		res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
 	} else if (error instanceof UnauthorizedError) {

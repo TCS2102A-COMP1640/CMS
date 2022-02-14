@@ -1,3 +1,4 @@
+import { ValidationError } from "express-validator";
 import { Algorithm } from "jsonwebtoken";
 
 export interface ApplicationConfig {
@@ -12,11 +13,15 @@ export interface ApplicationConfig {
 	jwtSecret: string;
 	jwtAlgorithm: Algorithm;
 	jwtExpiresIn: string | number;
+	saltLength: number;
+	keyLength: number;
 }
 
 declare module "express-serve-static-core" {
 	interface Request extends Express.Request {
 		validate(): boolean;
+		error?: Error;
+		validationErrors?: ValidationError[];
 	}
 
 	interface Application extends Express.Application {

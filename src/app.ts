@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request } from "express";
 import cors from "cors";
 import jwt, { Algorithm } from "jsonwebtoken";
 import expressJwt from "express-jwt";
@@ -32,7 +32,9 @@ const config: ApplicationConfig = {
 	databasePassword: process.env.DATABASE_PASSWORD || "postgres",
 	jwtSecret: process.env.JWT_SECRET || "4DFFBC3C4864E2F9A8647E79446FA",
 	jwtAlgorithm: (process.env.JWT_ALGORITHM as Algorithm) || "HS256",
-	jwtExpiresIn: process.env.JWT_EXPIRES_IN || 86400
+	jwtExpiresIn: process.env.JWT_EXPIRES_IN || 86400,
+	saltLength: _.toNumber(process.env.SALT_LENGTH) || 32,
+	keyLength: _.toNumber(process.env.KEY_LENGTH) || 64
 };
 const guestToken = jwt.sign(
 	{
@@ -43,6 +45,24 @@ const guestToken = jwt.sign(
 );
 
 console.log("Guest token: ", guestToken);
+
+morgan.token("validation", (req: Request) => {
+	if (_.isNil(req.validationErrors)) {
+		return "";
+	}
+	return `\n----------VALIDATION ERRORS----------\n${JSON.stringify(
+		req.validationErrors,
+		null,
+		2
+	)}\n-------------------------------------\n`;
+});
+
+morgan.token("error", (req: Request) => {
+	if (_.isNil(req.error)) {
+		return "";
+	}
+	return `\n----------ERROR----------\n${req.error}\n-------------------------\n`;
+});
 
 createConnection({
 	type: "postgres",
@@ -66,7 +86,11 @@ createConnection({
 				origin: config.serverEnvironment === "development" ? "http://localhost:3000" : "*" //for now
 			})
 		);
-		app.use(morgan("combined"));
+		app.use(
+			morgan(
+				':remote-addr - :remote-user [:date] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent" :validation :error'
+			)
+		);
 		app.use(bodyParser.json());
 		app.use(bodyParser.urlencoded({ extended: false }));
 		app.use(

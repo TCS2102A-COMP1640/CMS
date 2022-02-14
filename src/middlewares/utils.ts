@@ -7,6 +7,7 @@ export function utilsMiddleware(req: Request, res: Response, next: NextFunction)
 	req.validate = function () {
 		const result = validationResult(this);
 		if (!result.isEmpty()) {
+			req.validationErrors = result.array();
 			res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
 			return false;
 		}

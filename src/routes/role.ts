@@ -6,8 +6,8 @@ import { Role, Permissions, Roles } from "@app/database";
 import { asyncRoute, permission } from "@app/utils";
 import _ from "lodash";
 
-function validateNotAdmin(role?: Role): boolean {
-	return !(role.name === Roles.ADMIN);
+function validateNotAdminOrGuest(role?: Role): boolean {
+	return !(role.name === Roles.ADMIN || role.name === Roles.GUEST);
 }
 
 export function roleRouter(): Router {
@@ -51,7 +51,7 @@ export function roleRouter(): Router {
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				const role = await repository.findOneOrFail(req.params.id);
-				if (!validateNotAdmin(role)) {
+				if (!validateNotAdminOrGuest(role)) {
 					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
 					return;
 				}
@@ -69,7 +69,7 @@ export function roleRouter(): Router {
 		param("id").isInt(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				if (!validateNotAdmin(await repository.findOneOrFail(req.params.id))) {
+				if (!validateNotAdminOrGuest(await repository.findOneOrFail(req.params.id))) {
 					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
 					return;
 				}

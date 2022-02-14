@@ -1,26 +1,28 @@
 import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
-import { Role, Permissions, User, Roles } from "@app/database";
+import { Role, Permissions, User, Department } from "@app/database";
 import { asyncRoute, permission } from "@app/utils";
 import { param, checkSchema } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { scryptSync, randomBytes } from "crypto";
+import validator from "validator";
 import _ from "lodash";
-
-function validateAdmin(role?: Role): boolean {
-	return role.name === Roles.ADMIN;
-}
 
 export function userRouter(): Router {
 	const router = Router();
 	const repositoryUser: Repository<User> = getRepository(User);
 	const repositoryRole: Repository<Role> = getRepository(Role);
+	const repositoryDepartment: Repository<Department> = getRepository(Department);
 
 	router.get(
 		"/",
 		permission(Permissions.USER_GET_ALL),
 		asyncRoute(async (req, res) => {
-			res.json(await repositoryUser.find());
+			res.json(
+				_.map(await repositoryUser.find({ relations: ["role", "department"] }), (user) =>
+					_.omit(user, "password")
+				)
+			);
 		})
 	);
 
@@ -30,7 +32,12 @@ export function userRouter(): Router {
 		param("id").isInt(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				res.json(await repositoryUser.findOneOrFail(req.params.id));
+				res.json(
+					_.omit(
+						await repositoryUser.findOneOrFail(req.params.id, { relations: ["role", "department"] }),
+						"password"
+					)
+				);
 			}
 		})
 	);
@@ -42,8 +49,19 @@ export function userRouter(): Router {
 			email: {
 				in: "body",
 				exists: true,
-				isEmail: true,
-				normalizeEmail: true
+				custom: {
+					options: async (value: any) => {
+						if (!(_.isString(value) && validator.isEmail(value))) {
+							return Promise.reject();
+						}
+						const user = await repositoryUser.findOne({
+							email: _.toString(validator.normalizeEmail(value))
+						});
+						if (user) {
+							return Promise.reject();
+						}
+					}
+				}
 			},
 			firstName: {
 				in: "body",
@@ -58,33 +76,45 @@ export function userRouter(): Router {
 			password: {
 				in: "body",
 				exists: true,
-				isString: true
+				isString: true,
+				isStrongPassword: true
 			},
 			role: {
 				in: "body",
 				exists: true,
-				isString: true
+				custom: {
+					options: (value: any) => {
+						return !_.isInteger(value) ? Promise.reject() : repositoryRole.findOneOrFail({ id: value });
+					}
+				}
+			},
+			department: {
+				in: "body",
+				optional: true,
+				custom: {
+					options: (value: any) => {
+						return !_.isInteger(value)
+							? Promise.reject()
+							: repositoryDepartment.findOneOrFail({ id: value });
+					}
+				}
 			}
 		}),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				const user = await repositoryUser.findOneOrFail({ email: req.body.email }, { relations: ["role"] });
-				if (!user) {
-					const salt = randomBytes(32).toString("hex");
-					const hashedPassword = scryptSync(req.body.password, salt, 64).toString("hex");
+				const config = req.app.config;
+				const salt = randomBytes(config.saltLength).toString("hex");
+				const hashedPassword = scryptSync(req.body.password, salt, config.keyLength).toString("hex");
 
-					const newUser = repositoryUser.create({
-						email: req.body.email,
-						firstName: req.body.firstName,
-						lastName: req.body.lastName,
-						password: `${hashedPassword}$${salt}`,
-						role: req.body.role
-					});
-
-					res.json(await repositoryUser.save(newUser));
-				} else {
-					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
-				}
+				const user = repositoryUser.create({
+					email: req.body.email,
+					firstName: req.body.firstName,
+					lastName: req.body.lastName,
+					password: `${hashedPassword}$${salt}`,
+					role: req.body.role,
+					department: req.body.department
+				});
+				res.json(_.omit(await repositoryUser.save(user), "password"));
 			}
 		})
 	);
@@ -92,29 +122,77 @@ export function userRouter(): Router {
 	router.put(
 		"/:id",
 		permission(Permissions.USER_UPDATE),
-		param("id").isInt(),
+		checkSchema({
+			id: {
+				in: "params",
+				isInt: true
+			},
+			email: {
+				in: "body",
+				optional: true,
+				custom: {
+					options: async (value: any) => {
+						if (!(_.isString(value) && validator.isEmail(value))) {
+							return Promise.reject();
+						}
+						return validator.normalizeEmail(value);
+					}
+				}
+			},
+			firstName: {
+				in: "body",
+				optional: true,
+				isString: true
+			},
+			lastName: {
+				in: "body",
+				optional: true,
+				isString: true
+			},
+			password: {
+				in: "body",
+				optional: true,
+				isString: true,
+				isStrongPassword: true
+			},
+			role: {
+				in: "body",
+				optional: true,
+				custom: {
+					options: (value: any) => {
+						return !_.isInteger(value) ? Promise.reject() : repositoryRole.findOneOrFail({ id: value });
+					}
+				}
+			},
+			department: {
+				in: "body",
+				optional: true,
+				custom: {
+					options: (value: any) => {
+						return !_.isInteger(value)
+							? Promise.reject()
+							: repositoryDepartment.findOneOrFail({ id: value });
+					}
+				}
+			}
+		}),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				const role = await repositoryRole.findOneOrFail(req.params.id);
-				if (validateAdmin(role)) {
-					const user = await repositoryUser.findOneOrFail(req.params.id);
-					if (user) {
-						const salt = randomBytes(32).toString("hex");
-						const hashedPassword = scryptSync(req.body.password, salt, 64).toString("hex");
+				const user = await repositoryUser.findOneOrFail(req.params.id);
 
-						user.email = _.get(req.body, "email", user.email);
-						user.firstName = _.get(req.body, "firstName", user.firstName);
-						user.lastName = _.get(req.body, "lastName", user.lastName);
-						user.password = _.get(req.body, "password", `${hashedPassword}$${salt}`);
-						user.role = _.get(req.body, "role", user.role);
+				user.email = _.get(req.body, "email", user.email);
+				user.firstName = _.get(req.body, "firstName", user.firstName);
+				user.lastName = _.get(req.body, "lastName", user.lastName);
+				user.role = _.get(req.body, "role", user.role);
+				user.department = _.get(req.body, "department", user.department);
 
-						res.json(await repositoryUser.save(user));
-					} else {
-						res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
-					}
-				} else {
-					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+				if (!_.isNil(req.body.password)) {
+					const salt = randomBytes(32).toString("hex");
+					const hashedPassword = scryptSync(req.body.password, salt, 64).toString("hex");
+					user.password = `${hashedPassword}$${salt}`;
 				}
+
+				res.json(_.omit(await repositoryUser.save(user), "password"));
 			}
 		})
 	);

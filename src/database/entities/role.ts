@@ -18,10 +18,7 @@ export class Role {
 
 export enum Roles {
 	GUEST = "guest",
-	ADMIN = "admin",
-	QA_MANAGER = "qa_manager",
-	QA_COORDINATOR = "qa_coordinator",
-	STAFF = "staff"
+	ADMIN = "admin"
 }
 
 export async function setupRole(connection: Connection) {
