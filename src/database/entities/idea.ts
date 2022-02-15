@@ -12,6 +12,9 @@ import { User } from "./user";
 import { AcademicYear } from "./year";
 import { Category } from "./category";
 import { Comment } from "./comment";
+import { Reaction } from "./reaction";
+import { Document } from "./document";
+import { View } from "./view";
 
 @Entity()
 export class Idea {
@@ -32,6 +35,15 @@ export class Idea {
 
 	@OneToMany(() => Comment, (comment) => comment.idea)
 	comments: Promise<Comment[]>;
+
+	@OneToMany(() => Document, (document) => document.idea)
+	documents: Promise<Document[]>;
+
+	@OneToMany(() => Reaction, (reaction) => reaction.idea)
+	reactions: Promise<Reaction[]>;
+
+	@OneToMany(() => View, (view) => view.idea)
+	views: Promise<View[]>;
 
 	@Column()
 	content: string;
