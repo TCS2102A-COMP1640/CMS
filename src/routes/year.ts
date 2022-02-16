@@ -76,7 +76,7 @@ export function yearRouter(): Router {
 	);
 
 	router.put(
-		"/",
+		"/:id",
 		permission(Permissions.YEAR_UPDATE),
 		param("id").isInt(),
 		asyncRoute(async (req, res) => {
