@@ -6,10 +6,25 @@ import { getRepository, Repository } from "typeorm";
 import { User } from "@app/database";
 import { scryptSync } from "crypto";
 import jwt from "jsonwebtoken";
+import _ from "lodash";
 
 export function authRouter(): Router {
 	const router = Router();
 	const repository: Repository<User> = getRepository(User);
+
+	router.get(
+		"/",
+		asyncRoute(async (req, res) => {
+			if (!_.isNil(req.user.id)) {
+				res.json(
+					_.omit(
+						await repository.findOneOrFail({ id: req.user.id }, { relations: ["role", "department"] }),
+						"password"
+					)
+				);
+			}
+		})
+	);
 
 	router.post(
 		"/",

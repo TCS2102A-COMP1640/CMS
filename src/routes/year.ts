@@ -41,17 +41,17 @@ export function yearRouter(): Router {
 			openingDate: {
 				in: "body",
 				exists: true,
-				isDate: true
+				isISO8601: true
 			},
 			closureDate: {
 				in: "body",
 				exists: true,
-				isDate: true
+				isISO8601: true
 			},
 			finalClosureDate: {
 				in: "body",
 				exists: true,
-				isDate: true
+				isISO8601: true
 			}
 		}),
 		asyncRoute(async (req, res) => {

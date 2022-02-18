@@ -11,14 +11,6 @@ export function categoryRouter(): Router {
 	const repository: Repository<Category> = getRepository(Category);
 
 	router.get(
-		"/",
-		permission(Permissions.CATEGORY_GET_ALL),
-		asyncRoute(async (req, res) => {
-			res.json(await repository.find());
-		})
-	);
-
-	router.get(
 		"/:id",
 		permission(Permissions.CATEGORY_GET_BY_ID),
 		param("id").isInt(),
