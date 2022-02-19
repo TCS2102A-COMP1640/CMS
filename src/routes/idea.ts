@@ -16,12 +16,50 @@ export function ideaRouter(): Router {
 	router.get(
 		"/",
 		permission(Permissions.IDEA_GET_ALL),
+		checkSchema({
+			page: {
+				in: "query",
+				optional: true,
+				isInt: true,
+				toInt: true
+			},
+			pageLimit: {
+				in: "query",
+				optional: true,
+				isInt: true,
+				toInt: true
+			},
+			academicYear: {
+				in: "query",
+				exists: true,
+				custom: {
+					options: (value: any) => {
+						return repositoryYear.findOneOrFail({ id: _.toInteger(value) });
+					}
+				}
+			}
+		}),
 		asyncRoute(async (req, res) => {
-			res.json(
-				await repositoryIdea.find({
-					relations: ["user", "comment", "document", "reactions", "views", "academicYear"]
-				})
-			);
+			if (req.validate()) {
+				const page = Math.max(_.toNumber(_.get(req.query, "page", 0)), 0);
+				const pageLimit = Math.max(_.toNumber(_.get(req.query, "pageLimit", 5)), 1);
+
+				const [items, count] = await repositoryIdea
+					.createQueryBuilder("idea")
+					.leftJoinAndSelect("idea.user", "user")
+					.leftJoinAndSelect("user.department", "department")
+					.select(["idea.id", "idea.content"])
+					.addSelect(["user.id"])
+					.addSelect(["department.id", "department.name"])
+					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
+					.skip(page * pageLimit)
+					.take(pageLimit)
+					.getManyAndCount();
+				res.json({
+					pages: Math.ceil(count / pageLimit),
+					data: items
+				});
+			}
 		})
 	);
 
@@ -44,15 +82,6 @@ export function ideaRouter(): Router {
 		"/",
 		permission(Permissions.IDEA_CREATE),
 		checkSchema({
-			user: {
-				in: "body",
-				exists: true,
-				custom: {
-					options: (value: any) => {
-						return !_.isInteger(value) ? Promise.reject() : repositoryUser.findOneOrFail({ id: value });
-					}
-				}
-			},
 			academicYear: {
 				in: "body",
 				exists: true,
@@ -64,7 +93,7 @@ export function ideaRouter(): Router {
 			},
 			categories: {
 				in: "body",
-				exists: true,
+				optional: true,
 				custom: {
 					options: (value: any) => {
 						return !_.isInteger(value) ? Promise.reject() : repositoryCategory.findOneOrFail({ id: value });
@@ -79,13 +108,19 @@ export function ideaRouter(): Router {
 		}),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				const idea = repositoryIdea.create({
-					content: req.body.content,
-					user: req.body.user,
-					academicYear: req.body.academicYear,
-					categories: req.body.categories
-				});
-				res.json(await repositoryIdea.save(idea));
+				if (!_.isUndefined(req.user.id)) {
+					const idea = repositoryIdea.create({
+						content: req.body.content,
+						user: {
+							id: req.user.id
+						},
+						academicYear: req.body.academicYear
+						// categories: req.body.categories
+					});
+					res.json(await repositoryIdea.save(idea));
+				} else {
+					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+				}
 			}
 		})
 	);

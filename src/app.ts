@@ -61,6 +61,7 @@ morgan.token("error", (req: Request) => {
 	if (_.isNil(req.error)) {
 		return "";
 	}
+	console.error(req.error);
 	return `\n----------ERROR----------\n${req.error}\n-------------------------\n`;
 });
 
