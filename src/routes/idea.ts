@@ -47,14 +47,26 @@ export function ideaRouter(): Router {
 				const [items, count] = await repositoryIdea
 					.createQueryBuilder("idea")
 					.leftJoinAndSelect("idea.user", "user")
+					.leftJoinAndSelect("idea.categories", "categories")
+					.leftJoinAndSelect("idea.comments", "comments")
+					.leftJoinAndSelect("idea.documents", "documents")
+					.leftJoinAndSelect("idea.reactions", "reactions")
+					.leftJoinAndSelect("idea.views", "views")
 					.leftJoinAndSelect("user.department", "department")
 					.select(["idea.id", "idea.content"])
 					.addSelect(["user.id"])
 					.addSelect(["department.id", "department.name"])
+					.addSelect(["categories.id", "categories.name"])
+					.addSelect(["reactions.id", "reactions.type"])
+					.addSelect(["documents.id", "documents.path"])
+					.addSelect(["views.id"])
 					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
 					.skip(page * pageLimit)
 					.take(pageLimit)
 					.getManyAndCount();
+				items.forEach(async (idea) => {
+					console.log(await idea.categories);
+				});
 				res.json({
 					pages: Math.ceil(count / pageLimit),
 					data: items
@@ -87,7 +99,7 @@ export function ideaRouter(): Router {
 				exists: true,
 				custom: {
 					options: (value: any) => {
-						return !_.isInteger(value) ? Promise.reject() : repositoryYear.findOneOrFail({ id: value });
+						return repositoryYear.findOneOrFail({ id: _.toInteger(value) });
 					}
 				}
 			},
@@ -96,7 +108,7 @@ export function ideaRouter(): Router {
 				optional: true,
 				custom: {
 					options: (value: any) => {
-						return !_.isInteger(value) ? Promise.reject() : repositoryCategory.findOneOrFail({ id: value });
+						return _.isArray(value) && _.every(value, _.isInteger);
 					}
 				}
 			},
@@ -109,13 +121,14 @@ export function ideaRouter(): Router {
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				if (!_.isUndefined(req.user.id)) {
+					const categories = await repositoryCategory.findByIds(req.body.categories);
 					const idea = repositoryIdea.create({
 						content: req.body.content,
 						user: {
 							id: req.user.id
 						},
-						academicYear: req.body.academicYear
-						// categories: req.body.categories
+						academicYear: req.body.academicYear,
+						categories
 					});
 					res.json(await repositoryIdea.save(idea));
 				} else {

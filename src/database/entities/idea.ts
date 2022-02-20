@@ -31,19 +31,19 @@ export class Idea {
 	@JoinTable({
 		name: "idea_categories"
 	})
-	categories: Promise<Category[]>;
+	categories: Category[];
 
 	@OneToMany(() => Comment, (comment) => comment.idea)
-	comments: Promise<Comment[]>;
+	comments: Comment[];
 
 	@OneToMany(() => Document, (document) => document.idea)
-	documents: Promise<Document[]>;
+	documents: Document[];
 
 	@OneToMany(() => Reaction, (reaction) => reaction.idea)
-	reactions: Promise<Reaction[]>;
+	reactions: Reaction[];
 
 	@OneToMany(() => View, (view) => view.idea)
-	views: Promise<View[]>;
+	views: View[];
 
 	@Column()
 	content: string;
