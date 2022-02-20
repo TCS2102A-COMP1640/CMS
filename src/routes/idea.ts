@@ -53,20 +53,18 @@ export function ideaRouter(): Router {
 					.leftJoinAndSelect("idea.reactions", "reactions")
 					.leftJoinAndSelect("idea.views", "views")
 					.leftJoinAndSelect("user.department", "department")
-					.select(["idea.id", "idea.content"])
+					.select(["idea.id", "idea.content", "idea.createTimestamp"])
 					.addSelect(["user.id"])
 					.addSelect(["department.id", "department.name"])
 					.addSelect(["categories.id", "categories.name"])
 					.addSelect(["reactions.id", "reactions.type"])
 					.addSelect(["documents.id", "documents.path"])
+					.addSelect(["comments.id", "comments.content"])
 					.addSelect(["views.id"])
 					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
 					.skip(page * pageLimit)
 					.take(pageLimit)
 					.getManyAndCount();
-				items.forEach(async (idea) => {
-					console.log(await idea.categories);
-				});
 				res.json({
 					pages: Math.ceil(count / pageLimit),
 					data: items
