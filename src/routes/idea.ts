@@ -1,10 +1,36 @@
 import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
-import { checkSchema, param } from "express-validator";
+import { body, checkSchema, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
-import { AcademicYear, Idea, Permissions, User, Category } from "@app/database";
+import { AcademicYear, Idea, Permissions, User, Category, Document } from "@app/database";
 import { asyncRoute, permission } from "@app/utils";
+import multer from "multer";
+import path from "path";
 import _ from "lodash";
+
+const storage = multer.diskStorage({
+	destination: function (req, file, callback) {
+		callback(null, "./uploads/");
+	},
+	filename: function (req: any, file: any, callback: any) {
+		callback(null, file.fieldname + "-" + Date.now() + path.extname(file.originalname));
+	}
+});
+
+const fileFilter = (req: any, file: any, cb: any) => {
+	const filetypes = /jpeg|jpg|png|pdf|doc/;
+	const mimetype = filetypes.test(file.mimetype);
+
+	const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+	if (mimetype && extname) {
+		return cb(null, true);
+	}
+
+	cb("Error: File upload only supports the " + "following filetypes - " + filetypes);
+};
+
+const upload = multer({ storage: storage, fileFilter: fileFilter });
 
 export function ideaRouter(): Router {
 	const router = Router();
@@ -12,6 +38,7 @@ export function ideaRouter(): Router {
 	const repositoryUser: Repository<User> = getRepository(User);
 	const repositoryYear: Repository<AcademicYear> = getRepository(AcademicYear);
 	const repositoryCategory: Repository<Category> = getRepository(Category);
+	const repositoryDocument: Repository<Document> = getRepository(Document);
 
 	router.get(
 		"/",
@@ -116,17 +143,21 @@ export function ideaRouter(): Router {
 				isString: true
 			}
 		}),
+		body("path").exists().isString(),
+		upload.array("path", 5),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				if (!_.isUndefined(req.user.id)) {
 					const categories = await repositoryCategory.findByIds(req.body.categories);
+					const documents = await repositoryDocument.findByIds(req.body.documents);
 					const idea = repositoryIdea.create({
 						content: req.body.content,
 						user: {
 							id: req.user.id
 						},
 						academicYear: req.body.academicYear,
-						categories
+						categories,
+						documents
 					});
 					res.json(await repositoryIdea.save(idea));
 				} else {
