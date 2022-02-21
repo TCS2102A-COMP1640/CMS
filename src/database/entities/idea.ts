@@ -36,7 +36,7 @@ export class Idea {
 	@OneToMany(() => Comment, (comment) => comment.idea)
 	comments: Comment[];
 
-	@OneToMany(() => Document, (document) => document.idea)
+	@OneToMany(() => Document, (document) => document.idea, { cascade: true })
 	documents: Document[];
 
 	@OneToMany(() => Reaction, (reaction) => reaction.idea)

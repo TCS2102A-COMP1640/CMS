@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { User } from "./user";
 import { Idea } from "./idea";
 
@@ -16,6 +16,6 @@ export class View {
 	@CreateDateColumn({ type: "timestamp" })
 	createTimestamp: Date;
 
-	@CreateDateColumn({ type: "timestamp" })
+	@UpdateDateColumn({ type: "timestamp" })
 	updateTimestamp: Date;
 }

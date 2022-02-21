@@ -2,35 +2,45 @@ import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
 import { body, checkSchema, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
-import { AcademicYear, Idea, Permissions, User, Category, Document } from "@app/database";
-import { asyncRoute, permission } from "@app/utils";
+import { AcademicYear, Idea, Permissions, User, Comment, Category, Document } from "@app/database";
+import { asyncRoute, permission, throwError } from "@app/utils";
 import multer from "multer";
 import path from "path";
 import _ from "lodash";
 
-const storage = multer.diskStorage({
-	destination: function (req, file, callback) {
-		callback(null, "./uploads/");
-	},
-	filename: function (req: any, file: any, callback: any) {
-		callback(null, file.fieldname + "-" + Date.now() + path.extname(file.originalname));
+const upload = multer({
+	storage: multer.diskStorage({
+		destination: (req, file, callback) => {
+			callback(null, "./uploads/");
+		},
+		filename: (req, file, callback) => {
+			callback(null, `${Date.now()}${path.extname(file.originalname)}`);
+		}
+	}),
+	limits: { fileSize: 52428800 }, //50MB
+	fileFilter: (req, file, callback) => {
+		const fileTypes = /jpeg|jpg|png|pdf|doc/;
+		const mimeType = fileTypes.test(file.mimetype);
+
+		const extName = fileTypes.test(path.extname(file.originalname).toLowerCase());
+
+		if (mimeType && extName) {
+			return callback(null, true);
+		}
+
+		callback(new Error(`File upload only supports the following filetypes - ${fileTypes}`));
 	}
 });
 
-const fileFilter = (req: any, file: any, cb: any) => {
-	const filetypes = /jpeg|jpg|png|pdf|doc/;
-	const mimetype = filetypes.test(file.mimetype);
-
-	const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-	if (mimetype && extname) {
-		return cb(null, true);
+function isYearValid(year: AcademicYear): "valid" | "closure" | "invalid" {
+	const currentDate = new Date();
+	if (year.openingDate <= currentDate && currentDate <= year.closureDate) {
+		return "valid";
+	} else if (year.closureDate <= currentDate && currentDate <= year.finalClosureDate) {
+		return "closure";
 	}
-
-	cb("Error: File upload only supports the " + "following filetypes - " + filetypes);
-};
-
-const upload = multer({ storage: storage, fileFilter: fileFilter });
+	return "invalid";
+}
 
 export function ideaRouter(): Router {
 	const router = Router();
@@ -39,6 +49,7 @@ export function ideaRouter(): Router {
 	const repositoryYear: Repository<AcademicYear> = getRepository(AcademicYear);
 	const repositoryCategory: Repository<Category> = getRepository(Category);
 	const repositoryDocument: Repository<Document> = getRepository(Document);
+	const repositoryComment: Repository<Comment> = getRepository(Comment);
 
 	router.get(
 		"/",
@@ -85,8 +96,8 @@ export function ideaRouter(): Router {
 					.addSelect(["department.id", "department.name"])
 					.addSelect(["categories.id", "categories.name"])
 					.addSelect(["reactions.id", "reactions.type"])
-					.addSelect(["documents.id", "documents.path"])
-					.addSelect(["comments.id", "comments.content"])
+					.addSelect(["documents.id", "documents.name", "documents.path"])
+					.addSelect(["comments.id", "comments.content", "comments.createTimestamp"])
 					.addSelect(["views.id"])
 					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
 					.skip(page * pageLimit)
@@ -108,7 +119,7 @@ export function ideaRouter(): Router {
 			if (req.validate()) {
 				res.json(
 					await repositoryIdea.findOneOrFail(req.params.id, {
-						relations: ["user", "comment", "document", "reactions", "views", "academicYear"]
+						relations: ["user", "comments", "documents", "reactions", "views", "academicYear", "categories"]
 					})
 				);
 			}
@@ -118,6 +129,7 @@ export function ideaRouter(): Router {
 	router.post(
 		"/",
 		permission(Permissions.IDEA_CREATE),
+		upload.array("documents", 5),
 		checkSchema({
 			academicYear: {
 				in: "body",
@@ -140,28 +152,87 @@ export function ideaRouter(): Router {
 			content: {
 				in: "body",
 				exists: true,
-				isString: true
+				notEmpty: true
 			}
 		}),
-		body("path").exists().isString(),
-		upload.array("path", 5),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				if (!_.isUndefined(req.user.id)) {
-					const categories = await repositoryCategory.findByIds(req.body.categories);
-					const documents = await repositoryDocument.findByIds(req.body.documents);
-					const idea = repositoryIdea.create({
-						content: req.body.content,
-						user: {
-							id: req.user.id
-						},
-						academicYear: req.body.academicYear,
-						categories,
-						documents
+				const academicYear = await repositoryYear.findOne({ id: req.body.academicYear });
+
+				if (_.isUndefined(req.user.id) || isYearValid(academicYear) !== "valid") {
+					throwError(StatusCodes.BAD_REQUEST, "Invalid year or user ID is undefined");
+				}
+
+				const categories = _.isUndefined(req.body.categories)
+					? []
+					: await repositoryCategory.findByIds(req.body.categories);
+				const documents = (req.files as Express.Multer.File[]).map((file) => {
+					return repositoryDocument.create({
+						name: file.originalname,
+						path: file.path
 					});
-					res.json(await repositoryIdea.save(idea));
-				} else {
-					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+				});
+				const idea = repositoryIdea.create({
+					content: req.body.content,
+					user: {
+						id: req.user.id
+					},
+					academicYear,
+					categories,
+					documents
+				});
+				res.json(await repositoryIdea.save(idea));
+			}
+		})
+	);
+
+	router.post(
+		"/:id/comments",
+		permission(Permissions.IDEA_CREATE_COMMENT),
+		param("id").isInt(),
+		body("content").notEmpty().exists(),
+		asyncRoute(async (req, res) => {
+			if (req.validate()) {
+				if (_.isUndefined(req.user.id)) {
+					throwError(StatusCodes.BAD_REQUEST, "User ID is undefined");
+				}
+
+				const idea = await repositoryIdea.findOneOrFail(req.params.id);
+				const comment = repositoryComment.create({
+					user: {
+						id: req.user.id
+					},
+					idea,
+					content: req.body.content
+				});
+
+				res.json(_.pick(await repositoryComment.save(comment), ["id", "content", "createTimestamp"]));
+			}
+		})
+	);
+
+	router.post(
+		"/:id/reactions",
+		permission(Permissions.IDEA_CREATE_REACTION),
+		param("id").isInt(),
+		body("type").isInt().exists(),
+		asyncRoute(async (req, res) => {
+			if (req.validate()) {
+				if (_.isUndefined(req.user.id)) {
+					throwError(StatusCodes.BAD_REQUEST, "User ID is undefined");
+				}
+			}
+		})
+	);
+
+	router.post(
+		"/:id/views",
+		permission(Permissions.IDEA_CREATE_VIEW),
+		param("id").isInt(),
+		asyncRoute(async (req, res) => {
+			if (req.validate()) {
+				if (_.isUndefined(req.user.id)) {
+					throwError(StatusCodes.BAD_REQUEST, "User ID is undefined");
 				}
 			}
 		})

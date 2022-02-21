@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from "typeorm";
 import { Idea } from "./idea";
 import { User } from "./user";
 
@@ -15,4 +15,7 @@ export class Comment {
 
 	@Column()
 	content: string;
+
+	@CreateDateColumn({ type: "timestamp" })
+	createTimestamp: Date;
 }

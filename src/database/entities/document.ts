@@ -6,8 +6,11 @@ export class Document {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@ManyToOne(() => Idea, (idea) => idea.comments, { nullable: false, onDelete: "CASCADE" })
+	@ManyToOne(() => Idea, (idea) => idea.comments, { onDelete: "SET NULL" })
 	idea: Idea;
+
+	@Column({ nullable: false })
+	name: string;
 
 	@Column({ nullable: false, unique: true })
 	path: string;

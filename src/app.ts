@@ -5,6 +5,7 @@ import expressJwt from "express-jwt";
 import morgan from "morgan";
 import bodyParser from "body-parser";
 import path from "path";
+import { inspect } from "util";
 import _ from "lodash";
 import { createConnection } from "typeorm";
 import {
@@ -18,7 +19,7 @@ import {
 	userRouter
 } from "@app/routes";
 import { errorsMiddleware, utilsMiddleware } from "@app/middlewares";
-import { Roles, setupDatabase } from "./database";
+import { Roles, setupDatabase } from "@app/database";
 import { ApplicationConfig } from "@app/interfaces";
 
 const config: ApplicationConfig = {
@@ -46,23 +47,11 @@ const guestToken = jwt.sign(
 
 console.log("Guest token: ", guestToken);
 
-morgan.token("validation", (req: Request) => {
-	if (_.isNil(req.validationErrors)) {
-		return "";
-	}
-	return `\n----------VALIDATION ERRORS----------\n${JSON.stringify(
-		req.validationErrors,
-		null,
-		2
-	)}\n-------------------------------------\n`;
-});
-
 morgan.token("error", (req: Request) => {
 	if (_.isNil(req.error)) {
 		return "";
 	}
-	console.error(req.error);
-	return `\n----------ERROR----------\n${req.error}\n-------------------------\n`;
+	return `\n----------ERROR----------\n${inspect(req.error, false, null, true)}\n-------------------------\n`;
 });
 
 createConnection({
@@ -80,6 +69,8 @@ createConnection({
 	.then(() => {
 		const app = express();
 
+		Error.captureStackTrace;
+
 		app.config = config;
 
 		app.use(
@@ -89,7 +80,7 @@ createConnection({
 		);
 		app.use(
 			morgan(
-				':remote-addr - :remote-user [:date] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent" :validation :error'
+				':remote-addr - :remote-user [:date] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent" :error'
 			)
 		);
 		app.use(bodyParser.json());

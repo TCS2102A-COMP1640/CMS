@@ -21,7 +21,6 @@ declare module "express-serve-static-core" {
 	interface Request extends Express.Request {
 		validate(): boolean;
 		error?: Error;
-		validationErrors?: ValidationError[];
 	}
 
 	interface Application extends Express.Application {
@@ -30,6 +29,10 @@ declare module "express-serve-static-core" {
 }
 
 declare global {
+	interface Error {
+		statusCode?: number;
+	}
+
 	namespace Express {
 		interface User {
 			id?: number;

@@ -3,7 +3,7 @@ import { getRepository, Repository } from "typeorm";
 import { body, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { Role, Permissions, Roles } from "@app/database";
-import { asyncRoute, permission } from "@app/utils";
+import { asyncRoute, permission, throwError } from "@app/utils";
 import _ from "lodash";
 
 function validateNotAdminOrGuest(role?: Role): boolean {
@@ -52,8 +52,7 @@ export function roleRouter(): Router {
 			if (req.validate()) {
 				const role = await repository.findOneOrFail(req.params.id);
 				if (!validateNotAdminOrGuest(role)) {
-					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
-					return;
+					throwError(StatusCodes.BAD_REQUEST, "Cannot edit default roles such as guest or admin");
 				}
 
 				role.name = _.get(req.body, "name", role.name);
@@ -70,8 +69,7 @@ export function roleRouter(): Router {
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				if (!validateNotAdminOrGuest(await repository.findOneOrFail(req.params.id))) {
-					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
-					return;
+					throwError(StatusCodes.BAD_REQUEST, "Cannot delete default roles such as guest or admin");
 				}
 
 				await repository.delete(req.params.id);

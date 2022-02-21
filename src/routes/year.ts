@@ -3,7 +3,7 @@ import { getRepository, Repository } from "typeorm";
 import { param, checkSchema } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { AcademicYear, Permissions } from "@app/database";
-import { asyncRoute, permission } from "@app/utils";
+import { asyncRoute, permission, throwError } from "@app/utils";
 import _ from "lodash";
 
 export function yearRouter(): Router {
@@ -69,7 +69,7 @@ export function yearRouter(): Router {
 				) {
 					res.json(await repository.save(academicYear));
 				} else {
-					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+					throwError(StatusCodes.BAD_REQUEST, "Invalid year's fields provided");
 				}
 			}
 		})
@@ -94,7 +94,7 @@ export function yearRouter(): Router {
 				) {
 					res.json(await repository.save(academicYear));
 				} else {
-					res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
+					throwError(StatusCodes.BAD_REQUEST, "Invalid year's fields provided");
 				}
 			}
 		})

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { checkSchema } from "express-validator";
-import { StatusCodes, ReasonPhrases } from "http-status-codes";
-import { asyncRoute } from "@app/utils";
+import { StatusCodes } from "http-status-codes";
+import { asyncRoute, throwError } from "@app/utils";
 import { getRepository, Repository } from "typeorm";
 import { User } from "@app/database";
 import { scryptSync } from "crypto";
@@ -46,7 +46,6 @@ export function authRouter(): Router {
 				const config = req.app.config;
 				const user = await repository.findOneOrFail({ email: req.body.email }, { relations: ["role"] });
 				const [hash, salt] = user.password.split("$");
-
 				if (scryptSync(req.body.password, salt, 64).toString("hex") === hash) {
 					const token = jwt.sign(
 						{
@@ -61,7 +60,7 @@ export function authRouter(): Router {
 					);
 					res.json({ token });
 				} else {
-					res.status(StatusCodes.UNAUTHORIZED).send(ReasonPhrases.UNAUTHORIZED);
+					throwError(StatusCodes.UNAUTHORIZED, "Invalid credentials provided");
 				}
 			}
 		})
