@@ -145,7 +145,13 @@ export function ideaRouter(): Router {
 				optional: true,
 				custom: {
 					options: (value: any) => {
+						value = JSON.parse(value);
 						return _.isArray(value) && _.every(value, _.isInteger);
+					}
+				},
+				customSanitizer: {
+					options: (value: any) => {
+						return JSON.parse(value);
 					}
 				}
 			},
@@ -166,12 +172,14 @@ export function ideaRouter(): Router {
 				const categories = _.isUndefined(req.body.categories)
 					? []
 					: await repositoryCategory.findByIds(req.body.categories);
-				const documents = (req.files as Express.Multer.File[]).map((file) => {
-					return repositoryDocument.create({
-						name: file.originalname,
-						path: file.path
-					});
-				});
+				const documents = _.isUndefined(req.files)
+					? []
+					: (req.files as Express.Multer.File[]).map((file) => {
+							return repositoryDocument.create({
+								name: file.originalname,
+								path: file.path
+							});
+					  });
 				const idea = repositoryIdea.create({
 					content: req.body.content,
 					user: {

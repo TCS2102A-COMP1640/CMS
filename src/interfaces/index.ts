@@ -1,4 +1,3 @@
-import { ValidationError } from "express-validator";
 import { Algorithm } from "jsonwebtoken";
 
 export interface ApplicationConfig {
