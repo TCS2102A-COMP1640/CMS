@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { json, Router } from "express";
 import { getRepository, Repository } from "typeorm";
 import { body, checkSchema, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
@@ -91,17 +91,12 @@ export function ideaRouter(): Router {
 					.leftJoinAndSelect("idea.reactions", "reactions")
 					.leftJoinAndSelect("idea.views", "views")
 					.leftJoinAndSelect("user.department", "department")
-					.leftJoinAndSelect("comments.user", "commentUser")
-					.leftJoinAndSelect("commentUser.department", "commentUserDepartment")
 					.select(["idea.id", "idea.content", "idea.createTimestamp"])
 					.addSelect(["user.id"])
 					.addSelect(["department.id", "department.name"])
 					.addSelect(["categories.id", "categories.name"])
 					.addSelect(["reactions.id", "reactions.type"])
 					.addSelect(["documents.id", "documents.name", "documents.path"])
-					.addSelect(["comments.id", "comments.content", "comments.createTimestamp"])
-					.addSelect(["commentUser.id"])
-					.addSelect(["commentUserDepartment.id", "commentUserDepartment.name"])
 					.addSelect(["views.id"])
 					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
 					.skip(page * pageLimit)
@@ -122,9 +117,23 @@ export function ideaRouter(): Router {
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				res.json(
-					await repositoryIdea.findOneOrFail(req.params.id, {
-						relations: ["user", "comments", "documents", "reactions", "views", "academicYear", "categories"]
-					})
+					await repositoryIdea
+						.createQueryBuilder("idea")
+						.leftJoinAndSelect("idea.user", "user")
+						.leftJoinAndSelect("idea.categories", "categories")
+						.leftJoinAndSelect("idea.documents", "documents")
+						.leftJoinAndSelect("idea.reactions", "reactions")
+						.leftJoinAndSelect("idea.views", "views")
+						.leftJoinAndSelect("user.department", "department")
+						.select(["idea.id", "idea.content", "idea.createTimestamp"])
+						.addSelect(["user.id"])
+						.addSelect(["department.id", "department.name"])
+						.addSelect(["categories.id", "categories.name"])
+						.addSelect(["reactions.id", "reactions.type"])
+						.addSelect(["documents.id", "documents.name", "documents.path"])
+						.addSelect(["views.id"])
+						.where("idea.id = :ideaId", { ideaId: req.params.id })
+						.getOneOrFail()
 				);
 			}
 		})
@@ -198,11 +207,31 @@ export function ideaRouter(): Router {
 		})
 	);
 
+	router.get(
+		"/:id/comments",
+		permission(Permissions.IDEA_GET_ALL_COMMENT),
+		param("id").isInt(),
+		asyncRoute(async (req, res) => {
+			if (req.validate()) {
+				return res.json(
+					await repositoryComment
+						.createQueryBuilder("comment")
+						.leftJoinAndSelect("comment.user", "user")
+						.leftJoinAndSelect("user.department", "department")
+						.select(["comment.id", "comment.content", "comment.createTimestamp"])
+						.addSelect(["user.id"])
+						.addSelect(["department.id", "department.name"])
+						.where("comment.idea = :ideaId", { ideaId: req.params.id })
+						.getMany()
+				);
+			}
+		})
+	);
+
 	router.post(
 		"/:id/comments",
 		permission(Permissions.IDEA_CREATE_COMMENT),
 		param("id").isInt(),
-		body("content").notEmpty().exists(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				if (_.isUndefined(req.user.id)) {
