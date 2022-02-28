@@ -27,7 +27,7 @@ export class Idea {
 	@ManyToOne(() => AcademicYear, { nullable: false, onDelete: "CASCADE" })
 	academicYear: AcademicYear;
 
-	@ManyToMany(() => Category, { cascade: true })
+	@ManyToMany(() => Category, (category) => category.ideas, { cascade: true })
 	@JoinTable({
 		name: "idea_categories"
 	})

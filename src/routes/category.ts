@@ -3,7 +3,7 @@ import { getRepository, Repository } from "typeorm";
 import { body, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { Category, Permissions } from "@app/database";
-import { asyncRoute, permission } from "@app/utils";
+import { asyncRoute, permission, throwError } from "@app/utils";
 import _ from "lodash";
 
 export function categoryRouter(): Router {
@@ -60,6 +60,16 @@ export function categoryRouter(): Router {
 		permission(Permissions.CATEGORY_DELETE),
 		param("id").isInt(),
 		asyncRoute(async (req, res) => {
+			const category: Category = await repository
+				.createQueryBuilder("category")
+				.loadRelationCountAndMap("category.ideaCount", "category.ideas")
+				.whereInIds([req.params.id])
+				.getOneOrFail();
+
+			if (category.ideaCount > 0) {
+				throwError(StatusCodes.BAD_REQUEST, "This category has been used");
+			}
+
 			await repository.delete(req.params.id);
 			res.status(StatusCodes.OK).send(ReasonPhrases.OK);
 		})
