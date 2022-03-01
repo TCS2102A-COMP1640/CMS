@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
-import { body, checkSchema, param } from "express-validator";
+import { checkSchema, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { Role, Permissions, Roles, Permission } from "@app/database";
 import { asyncRoute, permission, throwError } from "@app/utils";

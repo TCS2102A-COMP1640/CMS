@@ -24,7 +24,7 @@ export function permission(value: string) {
 			next();
 			return;
 		}
-		const user = await getRepository(User).findOne(req.user.id, { relations: ["role"] });
+		const user = await getRepository(User).findOne(req.user.id, { relations: ["role", "role.permissions"] });
 		const permissions = user.role.permissions;
 
 		if (permissions.findIndex((p) => p.name === Permissions.ALL || p.name === value) != -1) {
