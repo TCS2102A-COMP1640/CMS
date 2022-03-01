@@ -9,16 +9,16 @@ export class Role {
 	@Column({ nullable: false, unique: true })
 	name: string;
 
-	@ManyToMany(() => Permission, { cascade: true })
+	@ManyToMany(() => Permission, { cascade: ["remove", "soft-remove"] })
 	@JoinTable({
 		name: "role_permissions"
 	})
-	permissions: Promise<Permission[]>;
+	permissions: Permission[];
 }
 
 export enum Roles {
-	GUEST = "guest",
-	ADMIN = "admin"
+	GUEST = "Guest",
+	ADMIN = "Admin"
 }
 
 export async function setupRole(connection: Connection) {
@@ -33,9 +33,9 @@ export async function setupRole(connection: Connection) {
 	await roleRepository.createQueryBuilder().insert().values(roles).orIgnore().execute();
 
 	const allPermission = await permissionRepository.findOne({ name: Permissions.ALL });
-	const adminRole = await roleRepository.findOne({ name: Roles.ADMIN });
+	const adminRole = await roleRepository.findOne({ where: { name: Roles.ADMIN }, relations: ["permissions"] });
 
-	if ((await adminRole.permissions).findIndex((p) => p.id === allPermission.id) === -1) {
+	if (adminRole.permissions.findIndex((p) => p.id === allPermission.id) === -1) {
 		await roleRepository.createQueryBuilder().relation("permissions").of(adminRole).add(allPermission);
 	}
 }

@@ -1,4 +1,4 @@
-import { json, Router } from "express";
+import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
 import { body, checkSchema, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { UnauthorizedError } from "express-jwt";
+import { TokenExpiredError } from "jsonwebtoken";
 import { TypeORMError } from "typeorm";
 import { StatusCodes } from "http-status-codes";
 import { unlink } from "fs";
@@ -8,6 +9,10 @@ import _ from "lodash";
 export function errorsMiddleware(error: Error, req: Request, res: Response, next: NextFunction) {
 	if (error instanceof UnauthorizedError) {
 		(error as Error).statusCode = StatusCodes.UNAUTHORIZED;
+
+		if (error.inner instanceof TokenExpiredError) {
+			error.message = "Your token has expired";
+		}
 	}
 	if (error instanceof TypeORMError || _.has(error, "errors")) {
 		(error as Error).statusCode = StatusCodes.BAD_REQUEST;

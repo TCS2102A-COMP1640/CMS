@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
 import { Role, Permissions, User, Department } from "@app/database";
-import { asyncRoute, permission } from "@app/utils";
+import { asyncRoute, permission, throwError } from "@app/utils";
 import { param, checkSchema } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { scryptSync, randomBytes } from "crypto";
@@ -52,14 +52,19 @@ export function userRouter(): Router {
 				custom: {
 					options: async (value: any) => {
 						if (!(_.isString(value) && validator.isEmail(value))) {
-							return Promise.reject();
+							return Promise.reject("This is not a valid email");
 						}
 						const user = await repositoryUser.findOne({
 							email: _.toString(validator.normalizeEmail(value))
 						});
 						if (user) {
-							return Promise.reject();
+							return Promise.reject("This email is already used");
 						}
+					}
+				},
+				customSanitizer: {
+					options: (value: any) => {
+						return validator.normalizeEmail(value);
 					}
 				}
 			},
@@ -77,14 +82,17 @@ export function userRouter(): Router {
 				in: "body",
 				exists: true,
 				isString: true,
-				isStrongPassword: true
+				isStrongPassword: true,
+				errorMessage: "Please provide a strong password"
 			},
 			role: {
 				in: "body",
 				exists: true,
 				custom: {
 					options: (value: any) => {
-						return !_.isInteger(value) ? Promise.reject() : repositoryRole.findOneOrFail({ id: value });
+						return !_.isInteger(value)
+							? Promise.reject("This role does not exist")
+							: repositoryRole.findOneOrFail({ id: value });
 					}
 				}
 			},
@@ -94,7 +102,7 @@ export function userRouter(): Router {
 				custom: {
 					options: (value: any) => {
 						return !_.isInteger(value)
-							? Promise.reject()
+							? Promise.reject("This department does not exist")
 							: repositoryDepartment.findOneOrFail({ id: value });
 					}
 				}
@@ -133,8 +141,12 @@ export function userRouter(): Router {
 				custom: {
 					options: async (value: any) => {
 						if (!(_.isString(value) && validator.isEmail(value))) {
-							return Promise.reject();
+							return Promise.reject("This is not a valid email");
 						}
+					}
+				},
+				customSanitizer: {
+					options: (value: any) => {
 						return validator.normalizeEmail(value);
 					}
 				}
@@ -153,24 +165,27 @@ export function userRouter(): Router {
 				in: "body",
 				optional: true,
 				isString: true,
-				isStrongPassword: true
+				isStrongPassword: true,
+				errorMessage: "Please provide a strong password"
 			},
 			role: {
 				in: "body",
 				optional: true,
 				custom: {
 					options: (value: any) => {
-						return !_.isInteger(value) ? Promise.reject() : repositoryRole.findOneOrFail({ id: value });
+						return !_.isInteger(value)
+							? Promise.reject("This role does not exist")
+							: repositoryRole.findOneOrFail({ id: value });
 					}
 				}
 			},
 			department: {
 				in: "body",
-				optional: true,
+				optional: { options: { nullable: true } },
 				custom: {
 					options: (value: any) => {
 						return !_.isInteger(value)
-							? Promise.reject()
+							? Promise.reject("This department does not exist")
 							: repositoryDepartment.findOneOrFail({ id: value });
 					}
 				}
@@ -192,6 +207,12 @@ export function userRouter(): Router {
 					user.password = `${hashedPassword}$${salt}`;
 				}
 
+				const existedUser = await repositoryUser.findOne({ email: user.email });
+
+				if (!_.isNil(existedUser) && existedUser.id !== user.id) {
+					throwError(StatusCodes.BAD_REQUEST, "This email is already used");
+				}
+
 				res.json(_.omit(await repositoryUser.save(user), "password"));
 			}
 		})
@@ -200,8 +221,12 @@ export function userRouter(): Router {
 	router.delete(
 		"/:id",
 		permission(Permissions.USER_DELETE),
-		param("id").isInt(),
+		param("id").isInt().toInt(),
 		asyncRoute(async (req, res) => {
+			if (_.isEqual(req.user.id, req.params.id)) {
+				throwError(StatusCodes.BAD_REQUEST, "You cannot delete your own account");
+			}
+
 			await repositoryUser.delete(req.params.id);
 			res.status(StatusCodes.OK).send(ReasonPhrases.OK);
 		})
