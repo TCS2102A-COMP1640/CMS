@@ -1,6 +1,6 @@
 import { Roles, User, Permissions } from "@app/database";
 import { Request, Response, NextFunction } from "express";
-import { StatusCodes, ReasonPhrases } from "http-status-codes";
+import { StatusCodes } from "http-status-codes";
 import { getRepository } from "typeorm";
 
 export function throwError(statusCode: number, message: string) {
@@ -18,8 +18,7 @@ export function asyncRoute(func: (req: Request, res: Response, next?: NextFuncti
 export function permission(value: string) {
 	return asyncRoute(async (req: Request, res: Response, next: NextFunction) => {
 		if (req.user.role === Roles.GUEST) {
-			res.status(StatusCodes.UNAUTHORIZED).send(ReasonPhrases.UNAUTHORIZED);
-			return;
+			throwError(StatusCodes.UNAUTHORIZED, "You do not have permission to perform this action");
 		}
 		if (req.user.role === Roles.ADMIN) {
 			next();
@@ -31,7 +30,7 @@ export function permission(value: string) {
 		if (permissions.findIndex((p) => p.name === Permissions.ALL || p.name === value) != -1) {
 			next();
 		} else {
-			res.status(StatusCodes.UNAUTHORIZED).send(ReasonPhrases.UNAUTHORIZED);
+			throwError(StatusCodes.UNAUTHORIZED, "You do not have permission to perform this action");
 		}
 	});
 }
