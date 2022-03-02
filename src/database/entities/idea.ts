@@ -45,6 +45,10 @@ export class Idea {
 	@OneToMany(() => View, (view) => view.idea)
 	views: View[];
 
+	viewCount: number;
+
+	reactionScore: number;
+
 	@Column()
 	content: string;
 

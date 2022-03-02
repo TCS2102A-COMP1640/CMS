@@ -63,6 +63,7 @@ export function ideaRouter(): Router {
 	const repositoryComment: Repository<Comment> = getRepository(Comment);
 	const repositoryReaction: Repository<Reaction> = getRepository(Reaction);
 	const repositoryView: Repository<View> = getRepository(View);
+	const orders = { reactions: "idea_reaction_score", views: "idea_view_count", latest: "idea.createTimestamp" };
 
 	router.get(
 		"/",
@@ -88,33 +89,64 @@ export function ideaRouter(): Router {
 						return repositoryYear.findOneOrFail({ id: _.toInteger(value) });
 					}
 				}
+			},
+			order: {
+				in: "query",
+				optional: true,
+				isString: true
 			}
 		}),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				const page = Math.max(_.toNumber(_.get(req.query, "page", 0)), 0);
 				const pageLimit = Math.max(_.toNumber(_.get(req.query, "pageLimit", 5)), 1);
+				const order = _.get(req.query, "order", undefined);
 
-				const [items, count] = await repositoryIdea
+				if (!_.isNil(order) && !(order in orders)) {
+					throwError(StatusCodes.BAD_REQUEST, "Unknown sorting order");
+				}
+
+				let query = repositoryIdea
 					.createQueryBuilder("idea")
 					.leftJoinAndSelect("idea.user", "user")
 					.leftJoinAndSelect("idea.categories", "categories")
 					.leftJoinAndSelect("idea.documents", "documents")
-					.leftJoinAndSelect("idea.views", "views")
 					.leftJoinAndSelect("user.department", "department")
 					.select(["idea.id", "idea.content", "idea.createTimestamp"])
 					.addSelect(["user.id"])
 					.addSelect(["department.id", "department.name"])
 					.addSelect(["categories.id", "categories.name"])
 					.addSelect(["documents.id", "documents.name", "documents.path"])
-					.addSelect(["views.createTimestamp", "views.updateTimestamp"])
+					.addSelect(
+						(qb) => qb.from(View, "view").select(`COUNT(view.ideaId)`).where(`view.ideaId = idea.id`),
+						"idea_view_count"
+					)
+					.addSelect(
+						(qb) =>
+							qb
+								.from(Reaction, "reaction")
+								.select(`COALESCE(SUM(CASE reaction.type WHEN 1 THEN 1 WHEN 2 THEN -1 ELSE 0 END), 0)`)
+								.where("reaction.ideaId = idea.id"),
+						"idea_reaction_score"
+					)
 					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
 					.skip(page * pageLimit)
-					.take(pageLimit)
-					.getManyAndCount();
+					.take(pageLimit);
+
+				if (!_.isNil(order)) {
+					query = query.orderBy(orders[order as keyof typeof orders], "DESC");
+				}
+
+				const { raw, entities } = await query.getRawAndEntities();
+				const count = entities.length;
+				entities.forEach((idea, index) => {
+					idea.viewCount = _.toInteger(raw[index]["idea_view_count"]);
+					idea.reactionScore = _.toInteger(raw[index]["idea_reaction_score"]);
+				});
+
 				res.json({
 					pages: Math.ceil(count / pageLimit),
-					data: items
+					data: entities
 				});
 			}
 		})
@@ -230,6 +262,7 @@ export function ideaRouter(): Router {
 						.addSelect(["user.id"])
 						.addSelect(["department.id", "department.name"])
 						.where("comment.idea = :ideaId", { ideaId: req.params.id })
+						.orderBy("comment.createTimestamp", "DESC")
 						.getMany()
 				);
 			}
