@@ -1,8 +1,19 @@
 import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
-import { body, checkSchema, param } from "express-validator";
+import { checkSchema, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
-import { AcademicYear, Idea, Permissions, User, Comment, Category, Document } from "@app/database";
+import {
+	AcademicYear,
+	Idea,
+	Permissions,
+	User,
+	Comment,
+	Category,
+	Document,
+	Reaction,
+	Reactions,
+	View
+} from "@app/database";
 import { asyncRoute, permission, throwError } from "@app/utils";
 import multer from "multer";
 import path from "path";
@@ -50,6 +61,8 @@ export function ideaRouter(): Router {
 	const repositoryCategory: Repository<Category> = getRepository(Category);
 	const repositoryDocument: Repository<Document> = getRepository(Document);
 	const repositoryComment: Repository<Comment> = getRepository(Comment);
+	const repositoryReaction: Repository<Reaction> = getRepository(Reaction);
+	const repositoryView: Repository<View> = getRepository(View);
 
 	router.get(
 		"/",
@@ -86,18 +99,15 @@ export function ideaRouter(): Router {
 					.createQueryBuilder("idea")
 					.leftJoinAndSelect("idea.user", "user")
 					.leftJoinAndSelect("idea.categories", "categories")
-					.leftJoinAndSelect("idea.comments", "comments")
 					.leftJoinAndSelect("idea.documents", "documents")
-					.leftJoinAndSelect("idea.reactions", "reactions")
 					.leftJoinAndSelect("idea.views", "views")
 					.leftJoinAndSelect("user.department", "department")
 					.select(["idea.id", "idea.content", "idea.createTimestamp"])
 					.addSelect(["user.id"])
 					.addSelect(["department.id", "department.name"])
 					.addSelect(["categories.id", "categories.name"])
-					.addSelect(["reactions.id", "reactions.type"])
 					.addSelect(["documents.id", "documents.name", "documents.path"])
-					.addSelect(["views.id"])
+					.addSelect(["views.createTimestamp", "views.updateTimestamp"])
 					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
 					.skip(page * pageLimit)
 					.take(pageLimit)
@@ -122,16 +132,14 @@ export function ideaRouter(): Router {
 						.leftJoinAndSelect("idea.user", "user")
 						.leftJoinAndSelect("idea.categories", "categories")
 						.leftJoinAndSelect("idea.documents", "documents")
-						.leftJoinAndSelect("idea.reactions", "reactions")
 						.leftJoinAndSelect("idea.views", "views")
 						.leftJoinAndSelect("user.department", "department")
 						.select(["idea.id", "idea.content", "idea.createTimestamp"])
 						.addSelect(["user.id"])
 						.addSelect(["department.id", "department.name"])
 						.addSelect(["categories.id", "categories.name"])
-						.addSelect(["reactions.id", "reactions.type"])
 						.addSelect(["documents.id", "documents.name", "documents.path"])
-						.addSelect(["views.id"])
+						.addSelect(["views.createTimestamp", "views.updateTimestamp"])
 						.where("idea.id = :ideaId", { ideaId: req.params.id })
 						.getOneOrFail()
 				);
@@ -252,16 +260,105 @@ export function ideaRouter(): Router {
 		})
 	);
 
-	router.post(
+	router.get(
 		"/:id/reactions",
-		permission(Permissions.IDEA_CREATE_REACTION),
+		permission(Permissions.IDEA_GET_REACTION),
 		param("id").isInt(),
-		body("type").isInt().exists(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				if (_.isUndefined(req.user.id)) {
 					throwError(StatusCodes.BAD_REQUEST, "User ID is undefined");
 				}
+				res.json(
+					_.pick(
+						(await repositoryReaction.findOne({
+							idea: {
+								id: _.toInteger(req.params.id)
+							},
+							user: {
+								id: req.user.id
+							}
+						})) ?? {
+							type: Reactions.NONE
+						},
+						"type"
+					)
+				);
+			}
+		})
+	);
+
+	router.post(
+		"/:id/reactions",
+		permission(Permissions.IDEA_CREATE_REACTION),
+		checkSchema({
+			id: {
+				in: "params",
+				isInt: true
+			},
+			type: {
+				in: "body",
+				isInt: true
+			}
+		}),
+		asyncRoute(async (req, res) => {
+			if (req.validate()) {
+				if (_.isUndefined(req.user.id)) {
+					throwError(StatusCodes.BAD_REQUEST, "User ID is undefined");
+				}
+
+				const type = Reactions[req.body.type];
+				if (_.isNil(type)) {
+					throwError(StatusCodes.BAD_REQUEST, "This reaction type does not exist");
+				}
+
+				const idea = await repositoryIdea.findOneOrFail(req.params.id);
+				let reaction = await repositoryReaction.findOne(
+					{
+						idea: {
+							id: idea.id
+						},
+						user: {
+							id: req.user.id
+						}
+					},
+					{ relations: ["idea", "user"] }
+				);
+
+				if (_.isNil(reaction)) {
+					reaction = repositoryReaction.create({
+						idea: {
+							id: idea.id
+						},
+						user: {
+							id: req.user.id
+						}
+					});
+				}
+
+				reaction.type = Reactions[type as keyof typeof Reactions];
+
+				res.json(_.pick(await repositoryReaction.save(reaction), ["type"]));
+			}
+		})
+	);
+
+	router.get(
+		"/:id/views",
+		permission(Permissions.IDEA_GET_ALL_VIEW),
+		param("id").isInt(),
+		asyncRoute(async (req, res) => {
+			if (req.validate()) {
+				if (_.isUndefined(req.user.id)) {
+					throwError(StatusCodes.BAD_REQUEST, "User ID is undefined");
+				}
+				res.json(
+					await repositoryView.find({
+						idea: {
+							id: _.toInteger(req.params.id)
+						}
+					})
+				);
 			}
 		})
 	);
@@ -275,6 +372,33 @@ export function ideaRouter(): Router {
 				if (_.isUndefined(req.user.id)) {
 					throwError(StatusCodes.BAD_REQUEST, "User ID is undefined");
 				}
+
+				const idea = await repositoryIdea.findOneOrFail(req.params.id);
+				let view = await repositoryView.findOne(
+					{
+						idea: {
+							id: idea.id
+						},
+						user: {
+							id: req.user.id
+						}
+					},
+					{ relations: ["idea", "user"] }
+				);
+
+				if (_.isNil(view)) {
+					view = repositoryView.create({
+						idea: {
+							id: idea.id
+						},
+						user: {
+							id: req.user.id
+						}
+					});
+				}
+				view.updateTimestamp = new Date();
+
+				res.json(_.pick(await repositoryView.save(view), ["createTimestamp", "updateTimestamp"]));
 			}
 		})
 	);

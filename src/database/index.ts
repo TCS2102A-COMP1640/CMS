@@ -8,7 +8,8 @@ import { Role, Roles, setupRole } from "./entities/role";
 import { User, setupUser } from "./entities/user";
 import { AcademicYear, setupAcademicYear } from "./entities/year";
 import { Document } from "./entities/document";
-import { Reaction } from "./entities/reaction";
+import { View } from "./entities/view";
+import { Reaction, Reactions } from "./entities/reaction";
 
 export async function setupDatabase(connection: Connection) {
 	await setupAcademicYear(connection);
@@ -30,8 +31,10 @@ export {
 	Permissions,
 	Role,
 	Roles,
+	View,
 	User,
 	AcademicYear,
 	Document,
-	Reaction
+	Reaction,
+	Reactions
 };

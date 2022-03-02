@@ -30,6 +30,8 @@ export enum Permissions {
 	YEAR_DELETE = "year.delete",
 	IDEA_GET_ALL = "idea.get.all",
 	IDEA_GET_ALL_COMMENT = "idea.get.all.comment",
+	IDEA_GET_ALL_VIEW = "idea.get.all.view",
+	IDEA_GET_REACTION = "idea.get.reaction",
 	IDEA_GET_BY_ID = "idea.get.id",
 	IDEA_CREATE = "idea.create",
 	IDEA_CREATE_COMMENT = "idea.create.comment",

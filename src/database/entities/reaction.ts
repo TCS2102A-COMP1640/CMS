@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from "typeorm";
+import { Entity, ManyToOne, Column, Index } from "typeorm";
 import { User } from "./user";
 import { Idea } from "./idea";
 
@@ -10,13 +10,12 @@ export enum Reactions {
 
 @Entity()
 export class Reaction {
-	@PrimaryGeneratedColumn()
-	id: number;
-
-	@ManyToOne(() => Idea, (idea) => idea.reactions, { nullable: false, onDelete: "CASCADE" })
+	@ManyToOne(() => Idea, (idea) => idea.reactions, { nullable: false, onDelete: "CASCADE", primary: true })
+	@Index()
 	idea: Idea;
 
-	@ManyToOne(() => User, { nullable: false, onDelete: "CASCADE" })
+	@ManyToOne(() => User, { nullable: false, onDelete: "CASCADE", primary: true })
+	@Index()
 	user: User;
 
 	@Column({ nullable: false, default: Reactions.NONE })

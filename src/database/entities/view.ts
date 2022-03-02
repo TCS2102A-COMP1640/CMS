@@ -1,21 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, ManyToOne, CreateDateColumn, UpdateDateColumn, Index } from "typeorm";
 import { User } from "./user";
 import { Idea } from "./idea";
 
 @Entity()
 export class View {
-	@PrimaryGeneratedColumn()
-	id: number;
-
-	@ManyToOne(() => Idea, (idea) => idea.views, { nullable: false, onDelete: "CASCADE" })
+	@ManyToOne(() => Idea, (idea) => idea.views, { nullable: false, onDelete: "CASCADE", primary: true })
+	@Index()
 	idea: Idea;
 
-	@ManyToOne(() => User, { nullable: false, onDelete: "CASCADE" })
+	@ManyToOne(() => User, { nullable: false, onDelete: "CASCADE", primary: true })
+	@Index()
 	user: User;
 
 	@CreateDateColumn({ type: "timestamp" })
 	createTimestamp: Date;
 
-	@UpdateDateColumn({ type: "timestamp" })
+	@UpdateDateColumn({ type: "timestamp", onUpdate: "CURRENT_TIMESTAMP(3)" })
 	updateTimestamp: Date;
 }
