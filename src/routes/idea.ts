@@ -157,6 +157,7 @@ export function ideaRouter(): Router {
 			}),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
+				const academicYear = await repositoryYear.findOne({ id: _.toInteger(req.query.academicYear) });
 				const raw = await repositoryIdea
 					.createQueryBuilder("idea")
 					.leftJoinAndSelect("idea.user", "user")
@@ -178,15 +179,15 @@ export function ideaRouter(): Router {
 								.where("reaction.ideaId = idea.id"),
 						"idea_reaction_score"
 					)
-					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
+					.where("idea.academicYear = :academicYearId", { academicYearId: academicYear.id })
 					.getRawMany();
 
 				const file = Buffer.from(json2csvParser.parse(raw));
 				const stream = new PassThrough();
 				stream.end(file);
 
-				res.set("Content-Disposition", "attachment;filename=ideas.csv");
-				res.set("Content-Type", "text/csv");
+				res.attachment(`ideas_${academicYear.name}.csv`);
+				res.contentType("text/csv");
 				stream.pipe(res);
 			}
 		})
@@ -203,12 +204,13 @@ export function ideaRouter(): Router {
 			}),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
+				const academicYear = await repositoryYear.findOne({ id: _.toInteger(req.query.academicYear) });
 				const ideas = await repositoryIdea
 					.createQueryBuilder("idea")
 					.leftJoinAndSelect("idea.documents", "documents")
 					.select(["idea.id"])
 					.addSelect(["documents.name", "documents.path"])
-					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
+					.where("idea.academicYear = :academicYearId", { academicYearId: academicYear.id })
 					.getMany();
 				const archive = archiver("zip", {
 					zlib: { level: 9 }
@@ -224,12 +226,11 @@ export function ideaRouter(): Router {
 					}
 				}
 
-				await archive.finalize();
-
-				res.set("Content-Disposition", "attachment;filename=documents.zip");
-				res.set("Content-Type", "application/zip");
+				res.attachment(`documents_${academicYear.name}.zip`);
+				res.contentType("application/zip");
 
 				archive.pipe(res);
+				archive.finalize();
 			}
 		})
 	);

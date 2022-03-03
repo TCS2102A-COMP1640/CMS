@@ -97,12 +97,12 @@ createConnection({
 					}
 					const tokenSplit: string[] = tokenRequest.split(" ");
 					if (tokenSplit.length === 2 && tokenSplit[0] === "Bearer") {
-						return tokenSplit[1];
+						return tokenSplit[1].trim();
 					}
 					if (tokenSplit[0].length === 0) {
 						return guestToken;
 					}
-					return tokenRequest[0];
+					return tokenSplit[0].trim();
 				}
 			})
 		);
