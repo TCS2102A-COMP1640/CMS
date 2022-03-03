@@ -1,23 +1,18 @@
 import { Router } from "express";
+import { Parser } from "json2csv";
 import { getRepository, Repository } from "typeorm";
-import { checkSchema, param } from "express-validator";
-import { StatusCodes, ReasonPhrases } from "http-status-codes";
-import {
-	AcademicYear,
-	Idea,
-	Permissions,
-	User,
-	Comment,
-	Category,
-	Document,
-	Reaction,
-	Reactions,
-	View
-} from "@app/database";
+import { query, checkSchema, param } from "express-validator";
+import { StatusCodes } from "http-status-codes";
+import { AcademicYear, Idea, Permissions, Comment, Category, Document, Reaction, Reactions, View } from "@app/database";
 import { asyncRoute, permission, throwError } from "@app/utils";
+import { PassThrough } from "stream";
+import { readFile } from "fs/promises";
+import archiver from "archiver";
 import multer from "multer";
 import path from "path";
 import _ from "lodash";
+
+const json2csvParser = new Parser();
 
 const upload = multer({
 	storage: multer.diskStorage({
@@ -56,7 +51,6 @@ function isYearValid(year: AcademicYear): "valid" | "closure" | "invalid" {
 export function ideaRouter(): Router {
 	const router = Router();
 	const repositoryIdea: Repository<Idea> = getRepository(Idea);
-	const repositoryUser: Repository<User> = getRepository(User);
 	const repositoryYear: Repository<AcademicYear> = getRepository(AcademicYear);
 	const repositoryCategory: Repository<Category> = getRepository(Category);
 	const repositoryDocument: Repository<Document> = getRepository(Document);
@@ -148,6 +142,94 @@ export function ideaRouter(): Router {
 					pages: Math.ceil(count / pageLimit),
 					data: entities
 				});
+			}
+		})
+	);
+
+	router.get(
+		"/csv",
+		permission(Permissions.IDEA_GET_ALL_CSV),
+		query("academicYear")
+			.exists()
+			.toInt()
+			.custom((value) => {
+				return repositoryYear.findOneOrFail({ id: value });
+			}),
+		asyncRoute(async (req, res) => {
+			if (req.validate()) {
+				const raw = await repositoryIdea
+					.createQueryBuilder("idea")
+					.leftJoinAndSelect("idea.user", "user")
+					.leftJoinAndSelect("idea.categories", "categories")
+					.leftJoinAndSelect("user.department", "department")
+					.select(["idea.id", "idea.content", "idea.createTimestamp"])
+					.addSelect(["user.firstName", "user.lastName"])
+					.addSelect(["department.name"])
+					.addSelect(["categories.name"])
+					.addSelect(
+						(qb) => qb.from(View, "view").select(`COUNT(view.ideaId)`).where(`view.ideaId = idea.id`),
+						"idea_view_count"
+					)
+					.addSelect(
+						(qb) =>
+							qb
+								.from(Reaction, "reaction")
+								.select(`COALESCE(SUM(CASE reaction.type WHEN 1 THEN 1 WHEN 2 THEN -1 ELSE 0 END), 0)`)
+								.where("reaction.ideaId = idea.id"),
+						"idea_reaction_score"
+					)
+					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
+					.getRawMany();
+
+				const file = Buffer.from(json2csvParser.parse(raw));
+				const stream = new PassThrough();
+				stream.end(file);
+
+				res.set("Content-Disposition", "attachment;filename=ideas.csv");
+				res.set("Content-Type", "text/csv");
+				stream.pipe(res);
+			}
+		})
+	);
+
+	router.get(
+		"/documents",
+		permission(Permissions.IDEA_GET_ALL_DOCUMENTS),
+		query("academicYear")
+			.exists()
+			.toInt()
+			.custom((value) => {
+				return repositoryYear.findOneOrFail({ id: value });
+			}),
+		asyncRoute(async (req, res) => {
+			if (req.validate()) {
+				const ideas = await repositoryIdea
+					.createQueryBuilder("idea")
+					.leftJoinAndSelect("idea.documents", "documents")
+					.select(["idea.id"])
+					.addSelect(["documents.name", "documents.path"])
+					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
+					.getMany();
+				const archive = archiver("zip", {
+					zlib: { level: 9 }
+				});
+
+				for (const idea of ideas) {
+					if (!_.isEmpty(idea.documents)) {
+						archive.append(null, { name: `${_.toString(idea.id)}/` });
+						for (const document of idea.documents) {
+							const buffer = await readFile(document.path);
+							archive.append(buffer, { name: `${_.toString(idea.id)}/${document.name}` });
+						}
+					}
+				}
+
+				await archive.finalize();
+
+				res.set("Content-Disposition", "attachment;filename=documents.zip");
+				res.set("Content-Type", "application/zip");
+
+				archive.pipe(res);
 			}
 		})
 	);
@@ -433,71 +515,6 @@ export function ideaRouter(): Router {
 
 				res.json(_.pick(await repositoryView.save(view), ["createTimestamp", "updateTimestamp"]));
 			}
-		})
-	);
-
-	router.put(
-		"/:id",
-		permission(Permissions.IDEA_UPDATE),
-		checkSchema({
-			id: {
-				in: "params",
-				isInt: true
-			},
-			user: {
-				in: "body",
-				exists: true,
-				custom: {
-					options: (value: any) => {
-						return !_.isInteger(value) ? Promise.reject() : repositoryUser.findOneOrFail({ id: value });
-					}
-				}
-			},
-			academicYear: {
-				in: "body",
-				exists: true,
-				custom: {
-					options: (value: any) => {
-						return !_.isInteger(value) ? Promise.reject() : repositoryYear.findOneOrFail({ id: value });
-					}
-				}
-			},
-			categories: {
-				in: "body",
-				exists: true,
-				custom: {
-					options: (value: any) => {
-						return !_.isInteger(value) ? Promise.reject() : repositoryCategory.findOneOrFail({ id: value });
-					}
-				}
-			},
-			content: {
-				in: "body",
-				exists: true,
-				isString: true
-			}
-		}),
-		asyncRoute(async (req, res) => {
-			if (req.validate()) {
-				const idea = await repositoryIdea.findOneOrFail(req.params.id);
-
-				idea.content = _.get(req.body, "content", idea.content);
-				idea.user = _.get(req.body, "user", idea.user);
-				idea.academicYear = _.get(req.body, "academicYear", idea.academicYear);
-				idea.categories = _.get(req.body, "categories", idea.categories);
-
-				res.json(await repositoryIdea.save(idea));
-			}
-		})
-	);
-
-	router.delete(
-		"/:id",
-		permission(Permissions.IDEA_DELETE),
-		param("id").isInt(),
-		asyncRoute(async (req, res) => {
-			await repositoryIdea.delete(req.params.id);
-			res.status(StatusCodes.OK).send(ReasonPhrases.OK);
 		})
 	);
 
