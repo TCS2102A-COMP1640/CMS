@@ -2,6 +2,7 @@ import { Roles, User, Permissions } from "@app/database";
 import { Request, Response, NextFunction } from "express";
 import { StatusCodes } from "http-status-codes";
 import { getRepository } from "typeorm";
+import _ from "lodash";
 
 export function throwError(statusCode: number, message: string) {
 	const error = new Error(message);
@@ -13,6 +14,12 @@ export function asyncRoute(func: (req: Request, res: Response, next?: NextFuncti
 	return function (req: Request, res: Response, next: NextFunction) {
 		Promise.resolve(func.call(this, req, res, next)).catch(next);
 	};
+}
+
+export function getPagination(req: Request): { page: number; pageLimit: number } {
+	const page = Math.max(_.toNumber(_.get(req.query, "page", 0)), 0);
+	const pageLimit = Math.max(_.toNumber(_.get(req.query, "pageLimit", 5)), 1);
+	return { page, pageLimit };
 }
 
 export function permission(value: string) {

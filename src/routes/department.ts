@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
-import { body, param } from "express-validator";
+import { body, checkSchema, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { Department, Permissions } from "@app/database";
-import { asyncRoute, permission } from "@app/utils";
+import { asyncRoute, permission, getPagination } from "@app/utils";
 import _ from "lodash";
 
 export function departmentRouter(): Router {
@@ -13,8 +13,23 @@ export function departmentRouter(): Router {
 	router.get(
 		"/",
 		permission(Permissions.DEPARTMENT_GET_ALL),
+		checkSchema({
+			page: {
+				in: "query",
+				optional: true,
+				isInt: true
+			},
+			pageLimit: {
+				in: "query",
+				optional: true,
+				isInt: true
+			}
+		}),
 		asyncRoute(async (req, res) => {
-			res.json(await repository.find());
+			if (req.validate()) {
+				const { page, pageLimit } = getPagination(req);
+				res.json(await repository.find({ skip: page * pageLimit, take: pageLimit }));
+			}
 		})
 	);
 
