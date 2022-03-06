@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
-import { body, param } from "express-validator";
+import { body, param, checkSchema } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { Category, Permissions } from "@app/database";
-import { asyncRoute, permission, throwError } from "@app/utils";
+import { asyncRoute, permission, throwError, getPagination } from "@app/utils";
 import _ from "lodash";
 
 export function categoryRouter(): Router {
@@ -13,8 +13,23 @@ export function categoryRouter(): Router {
 	router.get(
 		"/",
 		permission(Permissions.CATEGORY_GET_ALL),
+		checkSchema({
+			page: {
+				in: "query",
+				optional: true,
+				isInt: true
+			},
+			pageLimit: {
+				in: "query",
+				optional: true,
+				isInt: true
+			}
+		}),
 		asyncRoute(async (req, res) => {
-			res.json(await repository.find());
+			if (req.validate()) {
+				const { page, pageLimit } = getPagination(req);
+				res.json(await repository.find({ skip: page * pageLimit, take: pageLimit }));
+			}
 		})
 	);
 

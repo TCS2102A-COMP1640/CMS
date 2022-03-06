@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getRepository, Repository } from "typeorm";
 import { Role, Permissions, User, Department } from "@app/database";
-import { asyncRoute, permission, throwError } from "@app/utils";
+import { asyncRoute, permission, throwError, getPagination } from "@app/utils";
 import { param, checkSchema } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { scryptSync, randomBytes } from "crypto";
@@ -17,12 +17,32 @@ export function userRouter(): Router {
 	router.get(
 		"/",
 		permission(Permissions.USER_GET_ALL),
+		checkSchema({
+			page: {
+				in: "query",
+				optional: true,
+				isInt: true
+			},
+			pageLimit: {
+				in: "query",
+				optional: true,
+				isInt: true
+			}
+		}),
 		asyncRoute(async (req, res) => {
-			res.json(
-				_.map(await repositoryUser.find({ relations: ["role", "department"] }), (user) =>
-					_.omit(user, "password")
-				)
-			);
+			if (req.validate()) {
+				const { page, pageLimit } = getPagination(req);
+				res.json(
+					_.map(
+						await repositoryUser.find({
+							skip: page * pageLimit,
+							take: pageLimit,
+							relations: ["role", "department"]
+						}),
+						(user) => _.omit(user, "password")
+					)
+				);
+			}
 		})
 	);
 

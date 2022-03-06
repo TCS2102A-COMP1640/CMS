@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { getRepository, Repository } from "typeorm";
+import { getRepository, Repository, Raw } from "typeorm";
 import { param, checkSchema } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { AcademicYear, Permissions } from "@app/database";
-import { asyncRoute, permission, throwError } from "@app/utils";
+import { asyncRoute, permission, throwError, getPagination } from "@app/utils";
 import _ from "lodash";
 
 export function yearRouter(): Router {
@@ -13,18 +13,37 @@ export function yearRouter(): Router {
 	router.get(
 		"/",
 		permission(Permissions.YEAR_GET_ALL),
+		checkSchema({
+			page: {
+				in: "query",
+				optional: true,
+				isInt: true
+			},
+			pageLimit: {
+				in: "query",
+				optional: true,
+				isInt: true
+			}
+		}),
 		asyncRoute(async (req, res) => {
-			res.json(await repository.find());
+			if (req.validate()) {
+				const { page, pageLimit } = getPagination(req);
+				res.json(await repository.find({ skip: page * pageLimit, take: pageLimit }));
+			}
 		})
 	);
 
 	router.get(
-		"/:id",
-		permission(Permissions.YEAR_GET_BY_ID),
-		param("id").isInt(),
+		"/:name",
+		permission(Permissions.YEAR_GET_BY_NAME),
+		param("name").isString(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				res.json(await repository.findOneOrFail(req.params.id));
+				res.json(
+					await repository.find({
+						where: { name: Raw((alias) => `LOWER(${alias}) LIKE '%${req.params.name.toLowerCase()}%'`) }
+					})
+				);
 			}
 		})
 	);

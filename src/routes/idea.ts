@@ -4,7 +4,7 @@ import { getRepository, Repository } from "typeorm";
 import { query, checkSchema, param } from "express-validator";
 import { StatusCodes } from "http-status-codes";
 import { AcademicYear, Idea, Permissions, Comment, Category, Document, Reaction, Reactions, View } from "@app/database";
-import { asyncRoute, permission, throwError } from "@app/utils";
+import { asyncRoute, getPagination, permission, throwError } from "@app/utils";
 import { PassThrough } from "stream";
 import { readFile } from "fs/promises";
 import archiver from "archiver";
@@ -92,8 +92,8 @@ export function ideaRouter(): Router {
 		}),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				const page = Math.max(_.toNumber(_.get(req.query, "page", 0)), 0);
-				const pageLimit = Math.max(_.toNumber(_.get(req.query, "pageLimit", 5)), 1);
+				const { page, pageLimit } = getPagination(req);
+
 				const order = _.get(req.query, "order", undefined);
 
 				if (!_.isNil(order) && !(order in orders)) {
@@ -131,8 +131,11 @@ export function ideaRouter(): Router {
 					query = query.orderBy(orders[order as keyof typeof orders], "DESC");
 				}
 
+				const count = await repositoryIdea
+					.createQueryBuilder("idea")
+					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
+					.getCount();
 				const { raw, entities } = await query.getRawAndEntities();
-				const count = entities.length;
 				entities.forEach((idea, index) => {
 					idea.viewCount = _.toInteger(raw[index]["idea_view_count"]);
 					idea.reactionScore = _.toInteger(raw[index]["idea_reaction_score"]);
