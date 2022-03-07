@@ -386,8 +386,8 @@ export function ideaRouter(): Router {
 									sender: { email: req.app.config.emailSender },
 									to: [
 										{
-											email: idea.user.email,
-											name: `${idea.user.firstName} ${idea.user.lastName}`
+											email: user.email,
+											name: `${user.firstName} ${user.lastName}`
 										}
 									],
 									subject: "Someone posted a new idea",
