@@ -3,7 +3,18 @@ import { Parser } from "json2csv";
 import { getRepository, Repository } from "typeorm";
 import { query, checkSchema, param } from "express-validator";
 import { StatusCodes } from "http-status-codes";
-import { AcademicYear, Idea, Permissions, Comment, Category, Document, Reaction, Reactions, View } from "@app/database";
+import {
+	AcademicYear,
+	Idea,
+	Permissions,
+	Comment,
+	Category,
+	Document,
+	Reaction,
+	Reactions,
+	View,
+	Role
+} from "@app/database";
 import { asyncRoute, getPagination, permission, throwError } from "@app/utils";
 import { PassThrough } from "stream";
 import { readFile } from "fs/promises";
@@ -56,6 +67,7 @@ export function ideaRouter(): Router {
 	const repositoryDocument: Repository<Document> = getRepository(Document);
 	const repositoryComment: Repository<Comment> = getRepository(Comment);
 	const repositoryReaction: Repository<Reaction> = getRepository(Reaction);
+	const repositoryRole: Repository<Role> = getRepository(Role);
 	const repositoryView: Repository<View> = getRepository(View);
 	const orders = { reactions: "idea_reaction_score", views: "idea_view_count", latest: "idea.createTimestamp" };
 
@@ -355,6 +367,36 @@ export function ideaRouter(): Router {
 					documents
 				});
 				res.json(await repositoryIdea.save(idea));
+
+				(
+					await repositoryRole
+						.createQueryBuilder("role")
+						.leftJoinAndSelect("role.users", "users")
+						.leftJoinAndSelect("role.permissions", "permissions")
+						.where("permissions.name IN (:...names)", {
+							names: [Permissions.IDEA_CREATE_RECEIVE_EMAIL, Permissions.ALL]
+						})
+						.getMany()
+				)
+					.flatMap((role) => role.users)
+					.forEach((user) => {
+						if (user.id !== idea.user.id) {
+							req.app.emailer
+								.sendTransacEmail({
+									sender: { email: req.app.config.emailSender },
+									to: [
+										{
+											email: idea.user.email,
+											name: `${idea.user.firstName} ${idea.user.lastName}`
+										}
+									],
+									subject: "Someone posted a new idea",
+									textContent: `A new idea was posted on ${academicYear.name}!\n\n${idea.content}`
+								})
+								.then()
+								.catch(console.error);
+						}
+					});
 			}
 		})
 	);

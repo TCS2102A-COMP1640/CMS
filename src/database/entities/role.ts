@@ -1,5 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, Connection, Repository } from "typeorm";
+import {
+	Entity,
+	PrimaryGeneratedColumn,
+	Column,
+	ManyToMany,
+	JoinTable,
+	Connection,
+	Repository,
+	OneToMany
+} from "typeorm";
 import { Permission, Permissions } from "./permission";
+import { User } from "./user";
 
 @Entity()
 export class Role {
@@ -8,6 +18,9 @@ export class Role {
 
 	@Column({ nullable: false, unique: true })
 	name: string;
+
+	@OneToMany(() => User, (user) => user.role)
+	users: User[];
 
 	@ManyToMany(() => Permission, { cascade: ["remove", "soft-remove"] })
 	@JoinTable({

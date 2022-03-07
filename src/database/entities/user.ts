@@ -10,7 +10,7 @@ export class User {
 	@Column({ unique: true, nullable: false })
 	email: string;
 
-	@ManyToOne(() => Role, { nullable: false, onDelete: "CASCADE" })
+	@ManyToOne(() => Role, (role) => role.users, { nullable: false, onDelete: "CASCADE" })
 	role: Role;
 
 	@ManyToOne(() => Department, { onDelete: "SET NULL" })
