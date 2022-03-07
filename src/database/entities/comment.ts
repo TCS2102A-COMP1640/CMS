@@ -16,6 +16,6 @@ export class Comment {
 	@Column()
 	content: string;
 
-	@CreateDateColumn({ type: "timestamp" })
+	@CreateDateColumn({ type: "timestamptz" })
 	createTimestamp: Date;
 }

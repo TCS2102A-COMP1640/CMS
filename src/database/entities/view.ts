@@ -12,9 +12,9 @@ export class View {
 	@Index()
 	user: User;
 
-	@CreateDateColumn({ type: "timestamp" })
+	@CreateDateColumn({ type: "timestamptz" })
 	createTimestamp: Date;
 
-	@UpdateDateColumn({ type: "timestamp", onUpdate: "CURRENT_TIMESTAMP(3)" })
+	@UpdateDateColumn({ type: "timestamptz", onUpdate: "CURRENT_TIMESTAMP(3)" })
 	updateTimestamp: Date;
 }

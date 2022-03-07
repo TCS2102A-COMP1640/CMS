@@ -119,9 +119,17 @@ export function ideaRouter(): Router {
 						(qb) =>
 							qb
 								.from(Reaction, "reaction")
-								.select(`COALESCE(SUM(CASE reaction.type WHEN 1 THEN 1 WHEN 2 THEN -1 ELSE 0 END), 0)`)
+								.select(`COALESCE(SUM(CASE reaction.type WHEN 1 THEN 1 ELSE 0 END), 0)`)
 								.where("reaction.ideaId = idea.id"),
-						"idea_reaction_score"
+						"idea_thumb_up_count"
+					)
+					.addSelect(
+						(qb) =>
+							qb
+								.from(Reaction, "reaction")
+								.select(`COALESCE(SUM(CASE reaction.type WHEN 2 THEN 1 ELSE 0 END), 0)`)
+								.where("reaction.ideaId = idea.id"),
+						"idea_thumb_down_count"
 					)
 					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
 					.skip(page * pageLimit)
@@ -139,6 +147,8 @@ export function ideaRouter(): Router {
 				entities.forEach((idea, index) => {
 					idea.viewCount = _.toInteger(raw[index]["idea_view_count"]);
 					idea.reactionScore = _.toInteger(raw[index]["idea_reaction_score"]);
+					idea.thumbUpCount = _.toInteger(raw[index]["idea_thumb_up_count"]);
+					idea.thumbDownCount = _.toInteger(raw[index]["idea_thumb_down_count"]);
 				});
 
 				res.json({
@@ -181,6 +191,22 @@ export function ideaRouter(): Router {
 								.select(`COALESCE(SUM(CASE reaction.type WHEN 1 THEN 1 WHEN 2 THEN -1 ELSE 0 END), 0)`)
 								.where("reaction.ideaId = idea.id"),
 						"idea_reaction_score"
+					)
+					.addSelect(
+						(qb) =>
+							qb
+								.from(Reaction, "reaction")
+								.select(`COALESCE(SUM(CASE reaction.type WHEN 1 THEN 1 ELSE 0 END), 0)`)
+								.where("reaction.ideaId = idea.id"),
+						"idea_thumb_up_count"
+					)
+					.addSelect(
+						(qb) =>
+							qb
+								.from(Reaction, "reaction")
+								.select(`COALESCE(SUM(CASE reaction.type WHEN 2 THEN 1 ELSE 0 END), 0)`)
+								.where("reaction.ideaId = idea.id"),
+						"idea_thumb_down_count"
 					)
 					.where("idea.academicYear = :academicYearId", { academicYearId: academicYear.id })
 					.getRawMany();

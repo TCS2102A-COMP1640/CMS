@@ -8,13 +8,13 @@ export class AcademicYear {
 	@Column({ nullable: false, unique: true })
 	name: string;
 
-	@Column({ type: "timestamp", nullable: false })
+	@Column({ type: "timestamptz", nullable: false })
 	openingDate: Date;
 
-	@Column({ type: "timestamp", nullable: false })
+	@Column({ type: "timestamptz", nullable: false })
 	closureDate: Date;
 
-	@Column({ type: "timestamp", nullable: false })
+	@Column({ type: "timestamptz", nullable: false })
 	finalClosureDate: Date;
 }
 

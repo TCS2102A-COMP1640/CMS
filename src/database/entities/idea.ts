@@ -49,9 +49,13 @@ export class Idea {
 
 	reactionScore: number;
 
+    thumbUpCount: number;
+
+    thumbDownCount: number;
+
 	@Column()
 	content: string;
 
-	@CreateDateColumn({ type: "timestamp" })
+	@CreateDateColumn({ type: "timestamptz" })
 	createTimestamp: Date;
 }

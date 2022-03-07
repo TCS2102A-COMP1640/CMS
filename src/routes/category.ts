@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getRepository, Repository } from "typeorm";
+import { getRepository, Repository, Raw } from "typeorm";
 import { body, param, checkSchema } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { Category, Permissions } from "@app/database";
@@ -34,12 +34,16 @@ export function categoryRouter(): Router {
 	);
 
 	router.get(
-		"/:id",
+		"/:name",
 		permission(Permissions.CATEGORY_GET_BY_ID),
-		param("id").isInt(),
+		param("name").isString(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				res.json(await repository.findOneOrFail(req.params.id));
+				res.json(
+					await repository.find({
+						where: { name: Raw((alias) => `LOWER(${alias}) LIKE '%${req.params.name.toLowerCase()}%'`) }
+					})
+				);
 			}
 		})
 	);
