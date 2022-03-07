@@ -391,7 +391,7 @@ export function ideaRouter(): Router {
 					throwError(StatusCodes.BAD_REQUEST, "User ID is undefined");
 				}
 
-				const idea = await repositoryIdea.findOneOrFail(req.params.id);
+				const idea = await repositoryIdea.findOneOrFail(req.params.id, { relations: ["user"] });
 				const comment = repositoryComment.create({
 					user: {
 						id: req.user.id
@@ -401,6 +401,23 @@ export function ideaRouter(): Router {
 				});
 
 				res.json(_.pick(await repositoryComment.save(comment), ["id", "content", "createTimestamp"]));
+
+				if (idea.user.id !== comment.user.id) {
+					req.app.emailer
+						.sendTransacEmail({
+							sender: { email: req.app.config.emailSender },
+							to: [
+								{
+									email: idea.user.email,
+									name: `${idea.user.firstName} ${idea.user.lastName}`
+								}
+							],
+							subject: "Someone commented on your idea",
+							textContent: `You received a new comment on your idea!\n\n${comment.content}`
+						})
+						.then()
+						.catch(console.error);
+				}
 			}
 		})
 	);

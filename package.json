@@ -9,6 +9,7 @@
 		"build": "ttsc"
 	},
 	"dependencies": {
+		"@sendinblue/client": "^3.1.0",
 		"archiver": "^5.3.0",
 		"cors": "^2.8.5",
 		"dotenv": "^14.2.0",

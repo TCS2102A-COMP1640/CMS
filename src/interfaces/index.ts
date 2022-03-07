@@ -1,4 +1,5 @@
 import { Algorithm } from "jsonwebtoken";
+import { TransactionalEmailsApi } from "@sendinblue/client";
 
 export interface ApplicationConfig {
 	serverHost: string;
@@ -14,6 +15,7 @@ export interface ApplicationConfig {
 	jwtExpiresIn: string | number;
 	saltLength: number;
 	keyLength: number;
+    emailSender: string;
 }
 
 declare module "express-serve-static-core" {
@@ -24,6 +26,7 @@ declare module "express-serve-static-core" {
 
 	interface Application extends Express.Application {
 		config: ApplicationConfig;
+		emailer: TransactionalEmailsApi;
 	}
 }
 

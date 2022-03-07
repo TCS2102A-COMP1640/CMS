@@ -8,6 +8,7 @@ import path from "path";
 import { inspect } from "util";
 import _ from "lodash";
 import { createConnection } from "typeorm";
+import * as SibApiV3Sdk from "@sendinblue/client";
 import {
 	authRouter,
 	roleRouter,
@@ -35,7 +36,8 @@ const config: ApplicationConfig = {
 	jwtAlgorithm: (process.env.JWT_ALGORITHM as Algorithm) || "HS256",
 	jwtExpiresIn: process.env.JWT_EXPIRES_IN || 86400,
 	saltLength: _.toNumber(process.env.SALT_LENGTH) || 32,
-	keyLength: _.toNumber(process.env.KEY_LENGTH) || 64
+	keyLength: _.toNumber(process.env.KEY_LENGTH) || 64,
+	emailSender: process.env.EMAIL_SENDER || ""
 };
 const guestToken = jwt.sign(
 	{
@@ -72,6 +74,9 @@ createConnection({
 		Error.captureStackTrace;
 
 		app.config = config;
+
+		app.emailer = new SibApiV3Sdk.TransactionalEmailsApi();
+		app.emailer.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, process.env.EMAIL_API_KEY);
 
 		app.use(
 			cors({

@@ -39,6 +39,8 @@ export enum Permissions {
 	IDEA_CREATE_COMMENT = "idea.create.comment",
 	IDEA_CREATE_REACTION = "idea.create.reaction",
 	IDEA_CREATE_VIEW = "idea.create.view",
+	IDEA_CREATE_RECEIVE_EMAIL = "idea.create.receive.email",
+	IDEA_CREATE_COMMENT_RECEIVE_EMAIL = "idea.create.comment.receive.email",
 	CATEGORY_GET_ALL = "category.get.all",
 	CATEGORY_GET_BY_ID = "category.get.id",
 	CATEGORY_CREATE = "category.create",
