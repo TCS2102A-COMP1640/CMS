@@ -16,6 +16,9 @@ export class Comment {
 	@Column()
 	content: string;
 
+	@Column()
+	isAnonymous: boolean;
+
 	@CreateDateColumn({ type: "timestamptz" })
 	createTimestamp: Date;
 }

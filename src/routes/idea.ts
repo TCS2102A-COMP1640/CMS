@@ -13,7 +13,8 @@ import {
 	Reaction,
 	Reactions,
 	View,
-	Role
+	Role,
+	User
 } from "@app/database";
 import { asyncRoute, getPagination, permission, throwError } from "@app/utils";
 import { PassThrough } from "stream";
@@ -118,14 +119,22 @@ export function ideaRouter(): Router {
 					.leftJoinAndSelect("idea.categories", "categories")
 					.leftJoinAndSelect("idea.documents", "documents")
 					.leftJoinAndSelect("user.department", "department")
-					.select(["idea.id", "idea.content", "idea.createTimestamp"])
-					.addSelect(["user.id"])
+					.select(["idea.id", "idea.content", "idea.createTimestamp", "idea.isAnonymous"])
+					.addSelect(["user.id", "user.firstName", "user.lastName"])
 					.addSelect(["department.id", "department.name"])
 					.addSelect(["categories.id", "categories.name"])
 					.addSelect(["documents.id", "documents.name", "documents.path"])
 					.addSelect(
 						(qb) => qb.from(View, "view").select(`COUNT(view.ideaId)`).where(`view.ideaId = idea.id`),
 						"idea_view_count"
+					)
+					.addSelect(
+						(qb) =>
+							qb
+								.from(Reaction, "reaction")
+								.select(`COALESCE(SUM(CASE reaction.type WHEN 1 THEN 1 WHEN 2 THEN -1 ELSE 0 END), 0)`)
+								.where("reaction.ideaId = idea.id"),
+						"idea_reaction_score"
 					)
 					.addSelect(
 						(qb) =>
@@ -161,6 +170,10 @@ export function ideaRouter(): Router {
 					idea.reactionScore = _.toInteger(raw[index]["idea_reaction_score"]);
 					idea.thumbUpCount = _.toInteger(raw[index]["idea_thumb_up_count"]);
 					idea.thumbDownCount = _.toInteger(raw[index]["idea_thumb_down_count"]);
+
+					if (idea.isAnonymous) {
+						idea.user = _.omit(idea.user, ["firstName", "lastName"]) as User;
+					}
 				});
 
 				res.json({
@@ -188,7 +201,7 @@ export function ideaRouter(): Router {
 					.leftJoinAndSelect("idea.user", "user")
 					.leftJoinAndSelect("idea.categories", "categories")
 					.leftJoinAndSelect("user.department", "department")
-					.select(["idea.id", "idea.content", "idea.createTimestamp"])
+					.select(["idea.id", "idea.content", "idea.createTimestamp", "idea.isAnonymous"])
 					.addSelect(["user.firstName", "user.lastName"])
 					.addSelect(["department.name"])
 					.addSelect(["categories.name"])
@@ -277,6 +290,81 @@ export function ideaRouter(): Router {
 	);
 
 	router.get(
+		"/statistics",
+		permission(Permissions.IDEA_GET_ALL_STATISTICS),
+		checkSchema({
+			academicYear: {
+				in: "query",
+				exists: true,
+				custom: {
+					options: (value: any) => {
+						return repositoryYear.findOneOrFail({ id: _.toInteger(value) });
+					}
+				}
+			}
+		}),
+		asyncRoute(async (req, res) => {
+			if (req.validate()) {
+				const ideas = await repositoryIdea
+					.createQueryBuilder("idea")
+					.leftJoinAndSelect("idea.user", "user")
+					.leftJoinAndSelect("idea.comments", "comments")
+					.leftJoinAndSelect("user.department", "department")
+					.select(["idea.isAnonymous"])
+					.addSelect(["user.id"])
+					.addSelect(["department.name"])
+					.addSelect(["comments.isAnonymous"])
+					.where("idea.academicYear = :academicYearId", { academicYearId: req.query.academicYear })
+					.getMany();
+
+				const result: {
+					[index: string]: {
+						total: number;
+						percentage: number;
+						contributors: number | number[];
+						anonymousIdeas: number;
+						anonymousComments: number;
+						ideasWithoutComment: number;
+					};
+				} = {};
+
+				ideas.forEach((idea) => {
+					const key = idea.user.department?.name ?? "Unassigned";
+					_.set(result, [key, "total"], _.get(result, [key, "total"], 0) + 1);
+					_.set(
+						result,
+						[key, "contributors"],
+						[...(_.get(result, [key, "contributors"], []) as number[]), idea.user.id]
+					);
+					_.set(
+						result,
+						[key, "anonymousIdeas"],
+						_.get(result, [key, "anonymousIdeas"], 0) + (idea.isAnonymous ? 1 : 0)
+					);
+					_.set(
+						result,
+						[key, "anonymousComments"],
+						_.get(result, [key, "anonymousComments"], 0) +
+							idea.comments.map((comment) => comment.isAnonymous).filter(Boolean).length
+					);
+					_.set(
+						result,
+						[key, "ideasWithoutComment"],
+						_.get(result, [key, "ideasWithoutComment"], 0) + (idea.comments.length > 0 ? 0 : 1)
+					);
+				});
+
+				_.forEach(result, (value, key) => {
+					_.set(result, [key, "percentage"], _.get(value, "total") / ideas.length);
+					_.set(result, [key, "contributors"], _.uniq(_.get(value, "contributors") as number[]).length);
+				});
+
+				res.json(result);
+			}
+		})
+	);
+
+	router.get(
 		"/:id",
 		permission(Permissions.IDEA_GET_BY_ID),
 		param("id").isInt(),
@@ -336,6 +424,12 @@ export function ideaRouter(): Router {
 				in: "body",
 				exists: true,
 				notEmpty: true
+			},
+			isAnonymous: {
+				in: "body",
+				exists: true,
+				isBoolean: true,
+				toBoolean: true
 			}
 		}),
 		asyncRoute(async (req, res) => {
@@ -362,6 +456,7 @@ export function ideaRouter(): Router {
 					user: {
 						id: req.user.id
 					},
+					isAnonymous: req.body.isAnonymous,
 					academicYear,
 					categories,
 					documents
@@ -408,16 +503,24 @@ export function ideaRouter(): Router {
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				return res.json(
-					await repositoryComment
-						.createQueryBuilder("comment")
-						.leftJoinAndSelect("comment.user", "user")
-						.leftJoinAndSelect("user.department", "department")
-						.select(["comment.id", "comment.content", "comment.createTimestamp"])
-						.addSelect(["user.id"])
-						.addSelect(["department.id", "department.name"])
-						.where("comment.idea = :ideaId", { ideaId: req.params.id })
-						.orderBy("comment.createTimestamp", "DESC")
-						.getMany()
+					(
+						await repositoryComment
+							.createQueryBuilder("comment")
+							.leftJoinAndSelect("comment.user", "user")
+							.leftJoinAndSelect("user.department", "department")
+							.select(["comment.id", "comment.content", "comment.createTimestamp", "comment.isAnonymous"])
+							.addSelect(["user.id", "user.firstName", "user.lastName"])
+							.addSelect(["department.id", "department.name"])
+							.where("comment.idea = :ideaId", { ideaId: req.params.id })
+							.orderBy("comment.createTimestamp", "DESC")
+							.getMany()
+					).map((comment) => {
+						if (comment.isAnonymous) {
+							comment.user = _.omit(comment.user, ["firstName", "lastName"]) as User;
+						}
+
+						return comment;
+					})
 				);
 			}
 		})
@@ -427,6 +530,18 @@ export function ideaRouter(): Router {
 		"/:id/comments",
 		permission(Permissions.IDEA_CREATE_COMMENT),
 		param("id").isInt(),
+		checkSchema({
+			content: {
+				in: "body",
+				exists: true,
+				isString: true
+			},
+			isAnonymous: {
+				in: "body",
+				exists: true,
+				isBoolean: true
+			}
+		}),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
 				if (_.isUndefined(req.user.id)) {
@@ -439,7 +554,8 @@ export function ideaRouter(): Router {
 						id: req.user.id
 					},
 					idea,
-					content: req.body.content
+					content: req.body.content,
+					isAnonymous: req.body.isAnonymous
 				});
 
 				res.json(_.pick(await repositoryComment.save(comment), ["id", "content", "createTimestamp"]));

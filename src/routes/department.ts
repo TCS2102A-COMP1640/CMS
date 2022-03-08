@@ -3,7 +3,7 @@ import { getRepository, Raw, Repository } from "typeorm";
 import { body, checkSchema, param } from "express-validator";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { Department, Permissions } from "@app/database";
-import { asyncRoute, permission, getPagination } from "@app/utils";
+import { asyncRoute, permission, getPagination, throwError } from "@app/utils";
 import _ from "lodash";
 
 export function departmentRouter(): Router {
@@ -54,6 +54,9 @@ export function departmentRouter(): Router {
 		body("name").exists().isString(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
+				if (req.body.name === "Unassigned") {
+					throwError(StatusCodes.BAD_REQUEST, "Unassigned is a preserved name");
+				}
 				res.json(await repository.save(repository.create({ name: req.body.name })));
 			}
 		})
@@ -65,11 +68,14 @@ export function departmentRouter(): Router {
 		param("id").isInt(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
-				const category = await repository.findOneOrFail(req.params.id);
+				const department = await repository.findOneOrFail(req.params.id);
+				department.name = _.get(req.body, "name", department.name);
 
-				category.name = _.get(req.body, "name", category.name);
+				if (department.name === "Unassigned") {
+					throwError(StatusCodes.BAD_REQUEST, "Unassigned is a preserved name");
+				}
 
-				res.json(await repository.save(category));
+				res.json(await repository.save(department));
 			}
 		})
 	);

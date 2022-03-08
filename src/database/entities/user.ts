@@ -14,7 +14,7 @@ export class User {
 	role: Role;
 
 	@ManyToOne(() => Department, { onDelete: "SET NULL" })
-	department: Department;
+	department?: Department;
 
 	@Column()
 	firstName: string;

@@ -35,7 +35,7 @@ export function categoryRouter(): Router {
 
 	router.get(
 		"/:name",
-		permission(Permissions.CATEGORY_GET_BY_ID),
+		permission(Permissions.CATEGORY_GET_BY_NAME),
 		param("name").isString(),
 		asyncRoute(async (req, res) => {
 			if (req.validate()) {
