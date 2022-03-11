@@ -4,8 +4,9 @@
 	"author": "Group9",
 	"license": "MIT",
 	"scripts": {
-		"start-dev": "concurrently \"ttsc -w\" \"nodemon -r dotenv/config --experimental-specifier-resolution=node dist/app.js\"",
+		"start-dev": "concurrently \"ttsc -w\" \"docker-compose up\" \"nodemon -r dotenv/config --experimental-specifier-resolution=node dist/app.js\"",
 		"format": "yarn prettier --write .",
+        "diagram": "typeorm-uml ormconfig.json --with-table-names-only --direction=TB",
 		"build": "ttsc"
 	},
 	"dependencies": {
@@ -40,6 +41,7 @@
 		"nodemon": "^1.19.0",
 		"prettier": "^2.5.1",
 		"ttypescript": "^1.5.13",
+		"typeorm-uml": "^1.6.5",
 		"typescript": "^4.5.5",
 		"typescript-transform-paths": "^3.3.1"
 	}
